@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Generate a PDF file with study annotation information'''
+
+import argparse
+import sys
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.annotate import AnnotateCRF
+from dftoolkit.rangelist import PlateList, RangeListAction
+from dftoolkit.texttools import enable_multilingual_fonts
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.utils import is_eval
+
+
+#########################################################################
+# MAIN
+#########################################################################
+def main():
+    '''Command line interface to study annotation'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--priority-file',
+                        help='use priority file')
+    parser.add_argument('--output', default='annotated.pdf',
+                        help='output PDF file')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--prefer-background',
+                        help='prefer listed background types (comma delimited)')
+    parser.add_argument('--multilingual', action='store_true',
+                        help='enable multilingual character support')
+    parser.add_argument('--module-boundaries', action='store_true',
+                        help='show module boundaries')
+    parser.add_argument('--watermark', default=None,
+                        help='display a watermark on each page')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+
+    if args.multilingual:
+        enable_multilingual_fonts()
+
+    study = study_from_files(args.studydir, args.verbose)
+
+    if args.priority_file:
+        study.load_priority_file(args.priority_file)
+
+    if is_eval():
+        args.watermark = 'Sample'
+
+    annotate = AnnotateCRF(study)
+    annotate.setup_document(args.output, watermark=args.watermark)
+    annotate.show_module_boundaries(args.module_boundaries)
+    annotate.set_preferred_types(args.prefer_background)
+    try:
+        annotate.build_pdf(plate_filter=args.plates)
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

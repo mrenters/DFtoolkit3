@@ -1,0 +1,18 @@
+#!/bin/sh
+source /opt/dftoolkit/bin/activate
+STUDY=$1
+shift
+STUDYDIR=`/opt/dfdiscover/bin/DFgetparam.rpc -s $STUDY STUDY_DIR`
+if [ -z "$STUDYDIR" ]
+then
+    echo "Unable to determine STUDY_DIR for study $STUDY"
+    exit 2
+fi
+
+EClist --studydir $STUDYDIR
+
+if [ $? -ne 0 ]
+then
+    echo "Report terminated with errors."
+    exit 2
+fi

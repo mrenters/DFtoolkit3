@@ -1,0 +1,178 @@
+.BEGINGROUP DFtoolkit
+.BEGIN TK_annotateCRF
+.TITLE Annotate CRFs
+.OPTION --plates <#>                    ...Include only the specified plates
+.OPTION --priority-file <file>          ...Use file to set priorities
+.OPTION --prefer-background <bkgd>      ...Prefer bkgd as the CRF type
+.OPTION --multilingual                  ...Enable multilingual output
+.OPTION --module-boundaries             ...Draw a box around module boundaries
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>TK_annotateCRF</title></head>
+<body bgcolor="white" text="black" link="blue">
+<h1>TK_annotateCRF</h1>
+<p>
+    This report generates annotated CRFs in PDF format. Each plate is shown
+    with the CRF image or eCRF shown on the left hand side
+    of the page, and the most important field attributes on the
+    right side of the page. The field attributes shown are field number, name,
+    module, alias, data type, format, description, legal range and coding
+    information.
+</p>
+<p>
+    Fields can be assigned a priority between 1 (most important) and 5 (least
+    important) which are shown as colors red, orange, yellow, green and blue
+    respectively. These priorities can be loaded from a field or set via
+    the 'priority' user defined attributes in DFsetup. By default all fields
+    have priority 5 and will be shown in blue.
+</p>
+<p>
+    Plates with more than fields than can be detailed on one page will repeat
+    for multiple pages. Fields that are in darker colors are detailed on
+    the current page while lighter colored fields are detailed on another
+    page. The fields are hyperlinked so clicking on a field will take you
+    to the page where its information is detailed.
+</p>
+<p>
+    The end of the PDF contains a variable cross reference showing where
+    each field is used. Clicking on the blue variable name will take you to
+    the page where the variable is detailed.
+</p>
+<h3>Options</h3>
+<table border="0">
+<tr>
+ <td>--plates LIST</td><td>The list of plates to include (defaults to all)</td>
+</tr><tr>
+ <td>--priority-file FILE</td><td>Use FILE to set field priorities</td>
+</tr><tr>
+ <td>--prefer-background BKGD</td><td>Prefer BKGD as the CRF type</td>
+</tr><tr>
+ <td>--multilingual</td><td>Enable multilingual support (embeds fonts)</td>
+</tr><tr>
+ <td>--module-boundaries</td><td>Draw boxes around modules</td>
+</tr>
+</table>
+</body>
+</html>
+.END
+
+.BEGIN TK_EClist
+.TITLE Editchecks to Excel
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>TK_EClist</title></head>
+<body bgcolor="white" text="black" link="blue">
+<h1>TK_EClist</h1>
+<p>
+    This report generates an Excel file containing a list of all edit checks
+    in the study.
+</p>
+<p>
+    The resulting Excel file is placed in $STUDYDIR/work/eclist.xlsx
+</p>
+</body>
+</html>
+.END
+
+.BEGIN TK_QC2Excel
+.TITLE Export QCs as Excel
+.OPTION --sites <#>                     ...Include only the specified sites
+.OPTION --ids <#>                       ...Include only the specified ids
+.OPTION --visits <#>                    ...Include only the specified visits
+.OPTION --plates <#>                    ...Include only the specified plates
+.OPTION --outstanding                   ...Include only unresolved QCs
+.OPTION --external                      ...Include only external QCs
+.OPTION --include-country               ...Include country information
+.OPTION --include-region                ...Include region information
+.OPTION --include-priority              ...Include QC priority information
+.OPTION --priority-file <file>          ...Use file to set priorities
+.OPTION --color-by-priority             ...Color code QCs by priority
+.OPTION --percent                       ...Use percent in charts
+.OPTION --simplify                      ...Coalesce statuses and types
+.OPTION --site-mode                     ...Streamline columns for site use
+.OPTION --timestamps                    ...Add timestamp columns
+.OPTION --noprotect                     ...Do not protect worksheet
+.OPTION --by-site                       ...Generate an Excel file each site
+.OPTION --mailmerge-allsites            ...Include sites in mailmerge.xlsm
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>TK_QC2Excel</title></head>
+<body bgcolor="white" text="black" link="blue">
+<h1>TK_QC2Excel</h1>
+<p>
+    This report generates Excel spreadsheets of the queries in the database.
+<p>
+    By default, QC2Excel will put all QCs into a single Excel file, but the
+    --by-site option will create separate Excel files for each site as well
+    as a mailmerge.xlsm file that contains a macro that can be used to email
+    the sites their QCs. Only sites with QCs will be included in this
+    mailmerge.xlsm file unless the --mailmerge-allsites option is also given.
+</p>
+<h3>Options</h3>
+<table border="0">
+<tr>
+ <td>--sites <#></td><td>Include only the specified sites</td>
+</tr><tr>
+ <td>--ids <#></td><td>Include only the specified ids</td>
+</tr><tr>
+ <td>--visits <#></td><td>Include only the specified visits</td>
+</tr><tr>
+ <td>--plates <#></td><td>Include only the specified plates</td>
+</tr><tr>
+ <td>--outstanding</td><td>Include only unresolved QCs</td>
+</tr><tr>
+ <td>--external</td><td>Include only external QCs</td>
+</tr><tr>
+ <td>--include-country</td><td>Include country information</td>
+</tr><tr>
+ <td>--include-region</td><td>Include region information</td>
+</tr><tr>
+ <td>--include-priority</td><td>Include QC priority information</td>
+</tr><tr>
+ <td>--priority-file <file></td><td>Use file to set priorities</td>
+</tr><tr>
+ <td>--color-by-priority</td><td>Color code QCs by priority</td>
+</tr><tr>
+ <td>--percent</td><td>Use percent in charts</td>
+</tr><tr>
+ <td>--simplify</td><td>Coalesce statuses and types</td>
+</tr><tr>
+ <td>--site-mode</td><td>Streamline columns for site use</td>
+</tr><tr>
+ <td>--timestamps</td><td>Add timestamp columns</td>
+</tr><tr>
+ <td>--noprotect</td><td>Do not protect worksheet</td>
+</tr><tr>
+ <td>--by-site</td><td>Generate an Excel file each site</td>
+</tr><tr>
+ <td>--mailmerge-allsites</td><td>Include all sites in mailmerge.xlsm, not
+    just the ones that have QCs</td>
+</tr>
+</table>
+</body>
+</html>
+.END
+
+.BEGIN TK_Schema2Excel
+.TITLE Schema to Excel
+.OPTION --plates <#>                    ...Include only the specified plates
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>TK_Schema2Excel</title></head>
+<body bgcolor="white" text="black" link="blue">
+<h1>TK_EClist</h1>
+<p>
+    This report generates an Excel file containing a list of plates and
+    fields properties in the study.
+</p>
+<p>
+    The resulting Excel file is placed in $STUDYDIR/work/schema.xlsx
+</p>
+</body>
+</html>
+.END
+.ENDGROUP DFtoolkit

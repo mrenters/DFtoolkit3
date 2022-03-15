@@ -1,0 +1,72 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Install or delete DFtoolkit reports from /opt/dfdiscover/reports.info'''
+
+import argparse
+import sys
+
+#########################################################################
+# MAIN
+#########################################################################
+def main():
+    '''Command line interface to update .info file'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--delete-only', action='store_true',
+                        help='delete DFtoolkit reports from .info')
+    parser.add_argument('--info', default='/opt/dftoolkit/reports/info',
+                        help='.info file to merge in')
+    parser.add_argument('--output', default='/opt/dfdiscover/reports/.info',
+                        help='output .info file to write')
+    args = parser.parse_args()
+
+    try:
+        with open(args.output, 'r') as info:
+            lines = info.read().splitlines()
+    except IOError:
+        lines = []
+
+    # Delete old
+    in_dftoolkit = False
+    updated = []
+    for line in lines:
+        if line == '.BEGINGROUP DFtoolkit':
+            in_dftoolkit = True
+        if not in_dftoolkit:
+            updated.append(line)
+        if line == '.ENDGROUP' and in_dftoolkit:
+            in_dftoolkit = False
+
+    if not args.delete_only:
+        try:
+            with open(args.info, 'r') as info:
+                updated.extend(info.read().splitlines())
+        except IOError:
+            print('unable to open input .info file')
+            sys.exit(2)
+
+    try:
+        with open(args.output, 'w') as info:
+            info.write('\n'.join(updated)+'\n')
+    except IOError:
+        print('unable to update .info file')
+        sys.exit(2)
+
+if __name__ == '__main__':
+    main()

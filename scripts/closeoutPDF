@@ -1,0 +1,235 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Generate a PDF file with study annotation information'''
+
+import argparse
+import logging
+import os
+import sys
+
+from multiprocessing import Pool, cpu_count
+
+from reportlab.lib.pagesizes import letter, A4
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.closeout import CloseoutPDF, format_pid
+from dftoolkit.rangelist import (
+    SiteList, SubjectList, VisitList, PlateList, LevelList, RangeListAction
+)
+from dftoolkit.sqldb import SQLDB
+from dftoolkit.texttools import enable_multilingual_fonts
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.utils import is_eval
+
+def worker_init(context):
+    '''Initialize a PDF creation worker'''
+    context['sql'] = SQLDB(context['db'])
+    setup_logging(context.get('verbose', 0))
+
+    worker_run.context = context
+    logging.info('Worker process %d created', os.getpid())
+    if context.get('nice', False):
+        os.nice(5)
+
+def worker_run(pid):
+    '''Create a PDF for pid'''
+    context = worker_run.context
+    success = False
+    logging.info('Beginning PDF for subject %s',
+                 format_pid(context.get('format_id'), pid))
+    pdf = CloseoutPDF(context, pid)
+    try:
+        pdf.build(context.get('pagesize', letter))
+        success = True
+    except Exception:
+        print_exception(context.get('verbose', 0))
+
+    logging.info('Finished PDF for subject %s',
+                 format_pid(context.get('format_id'), pid))
+    return (pid, success)
+
+#########################################################################
+# MAIN
+#########################################################################
+def main():
+    '''Command line interface to study closeout'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--db', default='data.db',
+                        help='intermediate database name')
+    parser.add_argument('--build', action='store_true',
+                        help='build the intermediate database first')
+    parser.add_argument('--destdir', default='.',
+                        help='output PDF directory')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed sites')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed subjects')
+    parser.add_argument('--visits', default=VisitList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed visits')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--levels', default=LevelList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed levels')
+    parser.add_argument('--attachments', default=PlateList(default_all=False),
+                        action=RangeListAction,
+                        help='include attachments for listed plates')
+    parser.add_argument('--secondaries', action='store_true',
+                        help='include secondary attachments')
+    parser.add_argument('--deleted', action='store_true',
+                        help='include deleted records')
+    parser.add_argument('--missing', action='store_true',
+                        help='include missing (lost) records')
+    parser.add_argument('--exclude-datalisting', action='store_true',
+                        help='exclude the data listing section')
+    parser.add_argument('--exclude-chronological-audit', action='store_true',
+                        help='exclude the chronological audit section')
+    parser.add_argument('--exclude-field-audit', action='store_true',
+                        help='exclude the audit by field section')
+    parser.add_argument('--blinded', default=None,
+                        choices=['redact', 'skip'],
+                        help='redact hidden fields')
+    parser.add_argument('--shadow-pages', default=None,
+                        help='prefer SHADOW_PAGES over study pages directory')
+    parser.add_argument('--prefer-background', default=None,
+                        help='prefer listed background types (comma delimited)')
+    parser.add_argument('--multilingual', action='store_true',
+                        help='enable multilingual character support')
+    parser.add_argument('--format-id',
+                        help='format of subject id (e.g. AB##-####)')
+    parser.add_argument('--pagesize', default='letter',
+                        help='page size letter/A4 (default: letter)')
+    parser.add_argument('--watermark', default=None,
+                        help='watermark to draw on each page')
+    parser.add_argument('--linearize', action='store_true',
+                        help='linearize PDF file (Fast Web View)')
+    parser.add_argument('--nice', action='store_true',
+                        help='lower process priority')
+    parser.add_argument('--parallel', default=1, type=int,
+                        help='generate PDFs in PARALLEL parallel jobs')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+
+    if args.multilingual:
+        enable_multilingual_fonts()
+
+    pagesizes = {
+        'letter': letter,
+        'A4': A4
+    }
+
+    pagesize = pagesizes.get(args.pagesize)
+    if pagesize is None:
+        print('page size', args.pagesize, 'is not supported')
+        sys.exit(2)
+
+    study = study_from_files(args.studydir, args.verbose)
+    study.api.shadow_pages = args.shadow_pages
+
+    # Use :temp: as a synonym for a temporary database
+    if args.db == ':temp:':
+        args.db = ''
+
+    try:
+        sql = SQLDB(args.db)
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
+
+    if args.build or args.db in (':memory:', ''):
+        try:
+            sql.initialize()
+            sql.populate(study, args.ids)
+        except Exception:
+            print_exception(args.verbose)
+
+    if is_eval():
+        args.watermark = 'Sample'
+
+    context = {
+        'study': study,
+        'db': args.db,
+        'destdir': args.destdir,
+        'sites': args.sites,
+        'pids': args.ids,
+        'visits': args.visits,
+        'plates': args.plates,
+        'levels': args.levels,
+        'attachments': args.attachments,
+        'secondaries': args.secondaries,
+        'linearize': args.linearize,
+        'format_pid': args.format_id,
+        'deleted': args.deleted,
+        'missing': args.missing,
+        'exclude_datalisting': args.exclude_datalisting,
+        'exclude_chronological_audit': args.exclude_chronological_audit,
+        'exclude_field_audit': args.exclude_field_audit,
+        'blinded': args.blinded,
+        'prefer_background': args.prefer_background,
+        'pagesize': pagesize,
+        'watermark': args.watermark,
+        'nice': args.nice,
+        'verbose': args.verbose,
+        'multilingual': args.multilingual
+    }
+
+    # Frozen executables don't handle multiprocessing correctly, so
+    # run them in single threaded mode. Temporary databases can't be
+    # shared across processes either.
+    if args.parallel == 1 or getattr(sys, 'frozen', False) or \
+        args.db in (':memory:', ''):
+        if args.parallel > 1:
+            logging.warning('Parallel mode not supported, running sequentially')
+        context['sql'] = sql
+        worker_run.context = context
+        if args.nice:
+            os.nice(5)
+        res = [worker_run(pid) for pid in sql.pidlist(context)]
+    else:
+        if args.parallel > cpu_count():
+            logging.warning('Requested parallel workers (%d) '
+                            'exceeds CPU count (%d)',
+                            args.parallel, cpu_count())
+
+        with Pool(args.parallel, initializer=worker_init,
+                  initargs=(context,)) as pool:
+            res = pool.map(worker_run, sql.pidlist(context))
+
+    failed = [str(x[0]) for x in list(filter(lambda x: not x[1], res))]
+    print(len(res)-len(failed), 'of', len(res), 'PDFs successfully created')
+    if failed:
+        print('Failed IDs:', ', '.join(failed))
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

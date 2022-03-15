@@ -1,0 +1,187 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Generate an Excel file of all the edit checks in a study'''
+
+import argparse
+import logging
+import os
+import sys
+import xlsxwriter
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.rangelist import PlateList, RangeListAction
+
+colnames = [
+    ('Plate Description', 35),
+    ('Plate', 8),
+    ('Field #', 8),
+    ('Module', 20),
+    ('Name', 12),
+    ('Alias', 12),
+    ('Type', 8),
+    ('Style', 15),
+    ('Visit Date', 15),
+    ('Description', 24),
+    ('Legal Range', 32),
+    ('Help', 32),
+    ('Required', 12),
+    ('Reason Level', 8),
+    ('Reason on Blank', 8),
+    ('Hidden', 8),
+    ('Display', 8),
+    ('Store', 8),
+    ('Format', 12),
+    ('Year', 8),
+    ('Impute', 8),
+    ('Plate Enter', 50),
+    ('Field Enter', 50),
+    ('Field Exit', 50),
+    ('Plate Exit', 50),
+    ('Coding', 50)
+]
+
+#####################################################################
+# ECList - Generate an Excel sheet with a list of all fields and
+#   edit checks attached to each one.
+#####################################################################
+def schema2excel(study, xlsx, plate_list):
+    '''Create an Excel file with a list of edit checks'''
+    logging.info('Creating Spreadsheet')
+    workbook = xlsxwriter.Workbook(xlsx)
+
+    header_format = workbook.add_format({
+        'bold': True,
+        'font_color': 'white',
+        'bg_color': '#244062',
+        'align': 'center',
+        'valign': 'vcenter',
+        'text_wrap': True,
+        'border': 1
+    })
+
+    wrap_format = workbook.add_format({
+        'valign': 'vcenter',
+        'text_wrap': True
+    })
+
+    sheet = workbook.add_worksheet('ECs')
+
+    sheet.set_row(0, 72)
+    for col, (_, width) in enumerate(colnames):
+        sheet.set_column(col, col, width)     # Page
+    row = 1
+
+    for plate in study.plates:
+        if plate.number not in plate_list:
+            continue
+        for field in plate.fields:
+            sheet.write(row, 0, plate.description, wrap_format)
+            sheet.write(row, 1, plate.number, wrap_format)
+            sheet.write(row, 2, field.number, wrap_format)
+            sheet.write(row, 3, field.moduleref.identifier, wrap_format)
+            sheet.write(row, 4, field.name, wrap_format)
+            sheet.write(row, 5, field.expanded_alias, wrap_format)
+            sheet.write(row, 6, field.data_type, wrap_format)
+            sheet.write(row, 7, field.style_name, wrap_format)
+            sheet.write(row, 8, field.use, wrap_format)
+            sheet.write(row, 9, field.expanded_description, wrap_format)
+            sheet.write(row, 10, field.legal_range, wrap_format)
+            sheet.write(row, 11, field.help_text, wrap_format)
+            sheet.write(row, 12, field.required, wrap_format)
+            sheet.write(row, 13, field.reason_level, wrap_format)
+            sheet.write(row, 14, field.reason_nonblank, wrap_format)
+            sheet.write(row, 15, field.blinded, wrap_format)
+            sheet.write(row, 16, field.display, wrap_format)
+            sheet.write(row, 17, field.store, wrap_format)
+            sheet.write(row, 18, field.data_format, wrap_format)
+            sheet.write(row, 19, field.year_cutoff, wrap_format)
+            sheet.write(row, 20, field.date_rounding, wrap_format)
+            sheet.write(row, 21, field.plate_enter, wrap_format)
+            sheet.write(row, 22, field.field_enter, wrap_format)
+            sheet.write(row, 23, field.field_exit, wrap_format)
+            sheet.write(row, 24, field.plate_exit, wrap_format)
+            sheet.write(row, 25, '\n'.join('{}={}'.format(code, label) \
+                for code, label in field.codes), wrap_format)
+            row += 1
+
+    if row == 1:
+        sheet.write(0, 0, 'No plates defined')
+    else:
+        sheet.add_table(0, 0, row-1, len(colnames)-1, {
+            'autofilter': True, 'name': 'EC_Details',
+            'columns': [{'header': colname, 'header_format': header_format} \
+                 for colname, _ in colnames]
+            })
+
+    #####################################################################
+    # Add print formatting setup
+    #####################################################################
+    sheet.set_header('&LSchema Report&C{0}&R&P of &N'.format(
+        study.study_name.replace("&", "&&")))
+    sheet.set_landscape()
+    sheet.set_paper(5)
+    sheet.fit_to_pages(1, 0)
+    sheet.repeat_rows(0)
+
+    #####################################################################
+    # Protect sheet from changes and save
+    #####################################################################
+    sheet.hide_gridlines(2)
+    sheet.set_zoom(100)
+    logging.info('Saving Spreadsheet')
+    workbook.close()
+
+#########################################################################
+# MAIN
+#########################################################################
+def main():
+    '''Command line interface to study closeout'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--xlsx', default='schema.xlsx',
+                        help='output Excel filename')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+
+    study = study_from_files(args.studydir, args.verbose)
+
+    if not args.xlsx:
+        args.xlsx = os.path.join(args.studydir, 'work', 'eclist.xlsx')
+
+    try:
+        schema2excel(study, args.xlsx, args.plates)
+    except Exception:
+        print_exception(args.verbose)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

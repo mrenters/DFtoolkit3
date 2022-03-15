@@ -1,0 +1,31 @@
+#!/bin/sh
+source /opt/dftoolkit/bin/activate
+STUDY=$1
+shift
+STUDYDIR=`/opt/dfdiscover/bin/DFgetparam.rpc -s $STUDY STUDY_DIR`
+if [ -z "$STUDYDIR" ]
+then
+    echo "Unable to determine STUDY_DIR for study $STUDY"
+    exit 2
+fi
+
+# Force output file when running from a report
+if [ -z "$DFUSER" ]
+then
+    OUTPUT=$STUDYDIR/work/annotated.pdf
+else
+    OUTPUT=$STUDYDIR/work/annotated-$DFUSER.pdf
+fi
+
+# Pass user paramaters first so that we can override security related
+# items like output file
+
+annotateCRF "$@" --studydir $STUDYDIR --output $OUTPUT
+
+if [ $? -eq 0 ]
+then
+    echo "Output file is $OUTPUT"
+else
+    echo "Report terminated with errors."
+    exit 2
+fi

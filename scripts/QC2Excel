@@ -1,0 +1,129 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Generate QC2Excel file(s)'''
+
+import argparse
+import os
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.rangelist import (
+    SiteList, SubjectList, VisitList, PlateList, RangeListAction
+)
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.qc2excel import build_qc2excel
+
+#########################################################################
+# MAIN
+#########################################################################
+def main():
+    '''Command line interface to QC2Excel'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--destdir', default=os.getcwd(),
+                        help='output directory')
+    parser.add_argument('--by-site', action='store_true',
+                        help='generate a file per site')
+    parser.add_argument('--mailmerge-allsites', action='store_true',
+                        help='include sites without queries in mailmerge.xlsx')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed sites')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed subjects')
+    parser.add_argument('--visits', default=VisitList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed visits')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--outstanding', action='store_true',
+                        help='include only outstanding queries')
+    parser.add_argument('--external', action='store_true',
+                        help='include only external queries')
+    parser.add_argument('--simplify', action='store_true',
+                        help='simplify output to outstanding/resolved and '
+                        'collapse EC missing pages into missing pages')
+    parser.add_argument('--site-mode', action='store_true',
+                        help='simplify output for site consumption')
+    parser.add_argument('--include-country', action='store_true',
+                        help='include country column')
+    parser.add_argument('--include-region', action='store_true',
+                        help='include region column')
+    parser.add_argument('--include-priority', action='store_true',
+                        help='include priority column')
+    parser.add_argument('--percent', action='store_true',
+                        help='show percentages in charts instead of counts')
+    parser.add_argument('--priority-file',
+                        help='use priority file')
+    parser.add_argument('--color-by-priority', action='store_true',
+                        help='color rows by field priority')
+    parser.add_argument('--timestamps', action='store_true',
+                        help='show creation/modification/resolution '
+                        'user and timestamps')
+    parser.add_argument('--noprotect', action='store_true',
+                        help='do not protect (lock) worksheet')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+
+    study = study_from_files(args.studydir, args.verbose)
+
+    if args.priority_file:
+        study.load_priority_file(args.priority_file)
+
+    context = {
+        'study': study,
+        'destdir': args.destdir,
+        'bysite': args.by_site,
+        'mailmerge_allsites': args.mailmerge_allsites,
+        'sites': args.sites,
+        'pids': args.ids,
+        'visits': args.visits,
+        'plates': args.plates,
+        'external': args.external,
+        'outstanding': args.outstanding,
+        'simplify': args.simplify,
+        'sitemode': args.site_mode,
+        'include_region': args.include_region,
+        'include_country': args.include_country,
+        'include_priority': args.include_priority or args.priority_file,
+        'percent': args.percent,
+        'color_priority': args.color_by_priority,
+        'timestamps': args.timestamps,
+        'noprotect': args.noprotect,
+        'verbose': args.verbose
+    }
+
+    try:
+        build_qc2excel(study, context)
+    except Exception:
+        print_exception(args.verbose)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass
