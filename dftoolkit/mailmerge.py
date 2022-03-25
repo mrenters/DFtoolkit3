@@ -76,7 +76,7 @@ class MailMerge:
         else:
             self.sheet.merge_range(0, 3, 0, len(columns)-1,
                 'E-Mail Template Variables: {SITE}, {COUNTRY}, '
-                '{SITENAME}, {CONTACT}', self.wrap_format)
+                '{SITENAME}, {CONTACT}, {DATE}', self.wrap_format)
             self.sheet.insert_button(0, 0, {
                 'macro': '\'Create_Email "no"\'',
                 'caption': 'Create Emails',
