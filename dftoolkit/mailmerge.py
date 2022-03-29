@@ -71,7 +71,7 @@ class MailMerge:
 
     def close(self):
         '''add a table (or message) and close the workbook'''
-        if self.row == 1:
+        if self.row == TABLE_START_ROW+1:
             self.sheet.merge_range(0, 0, 0, len(columns)-1, 'Nothing to report')
         else:
             self.sheet.merge_range(0, 3, 0, len(columns)-1,
