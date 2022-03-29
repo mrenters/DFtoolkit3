@@ -12,10 +12,14 @@ fi
 # Pass user paramaters first so that we can override security related
 # items like output file
 
-QC2Excel "$@" --studydir $STUDYDIR --destdir $STUDYDIR/work/QC2Excel
+OUTPUT=$STUDYDIR/work/QC2Excel
+QC2Excel "$@" --studydir $STUDYDIR --destdir $OUTPUT
 
-if [ $? -ne 0 ]
+if [ $? -eq 0 ]
 then
+    echo "Output file is $OUTPUT"
+else
     echo "Report terminated with errors."
     exit 2
 fi
+

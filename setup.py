@@ -38,6 +38,7 @@ setup(
         'scripts/closeoutPDF',
         'scripts/make_closeout_db',
         'scripts/updateinfo',
+        'scripts/EClist',
         'scripts/QC2Excel',
         'scripts/schema2excel',
     ],

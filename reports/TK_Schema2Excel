@@ -9,10 +9,15 @@ then
     exit 2
 fi
 
-schema2excel "$@" --studydir $STUDYDIR --xlsx $STUDYDIR/work/schema.xlsx
+OUTPUT=$STUDYDIR/work/schema.xlsx
 
-if [ $? -ne 0 ]
+schema2excel "$@" --studydir $STUDYDIR --xlsx $OUTPUT
+
+if [ $? -eq 0 ]
 then
+    echo "Output file is $OUTPUT"
+else
     echo "Report terminated with errors."
     exit 2
 fi
+

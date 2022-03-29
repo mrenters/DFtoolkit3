@@ -9,10 +9,15 @@ then
     exit 2
 fi
 
-EClist --studydir $STUDYDIR
+OUTPUT=$STUDYDIR/work/eclist.xlsx
 
-if [ $? -ne 0 ]
+EClist --studydir $STUDYDIR --xlsx $OUTPUT
+
+if [ $? -eq 0 ]
 then
+    echo "Output file is $OUTPUT"
+else
     echo "Report terminated with errors."
     exit 2
 fi
+
