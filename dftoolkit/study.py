@@ -336,9 +336,12 @@ class Study:
     ########################################################################
     # Data Export Related functions
     ########################################################################
-    def data(self, plate, subjects=SubjectList(default_all=True)):
-        '''Returns a Query structure based on raw QC record'''
-        for record in self.api.data(plate, subjects):
+    def data(self, plate, subjects=SubjectList(default_all=True),
+             missing_records=False, secondary_records=False):
+        '''Returns a Query structure based on raw data record'''
+        for record in self.api.data(plate, subjects,
+                                    missing_records=missing_records,
+                                    secondary_records=secondary_records):
             yield Record(self, record)
 
     ########################################################################

@@ -181,7 +181,8 @@ class SQLDB:
         sql = self.sql
         for plate in study.plates:
             logger.info('Importing Plate %d...', plate.number)
-            for record in study.api.data(plate, subjects):
+            for record in study.api.data(plate, subjects, missing_records=True,
+                                         secondary_records=True):
                 fields = record.split('|')
                 pid = int(fields[6])
                 visit_num = int(fields[5])

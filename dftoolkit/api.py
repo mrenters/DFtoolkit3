@@ -83,7 +83,8 @@ class APIBase:
         '''Returns DFvisit_map content'''
         raise IOError
 
-    def data(self, plate, subjects):
+    def data(self, plate, subjects=SubjectList(default_all=True),
+             missing_records=False, secondary_records=False):
         '''Returns patient data records for plate'''
         raise IOError
 
@@ -240,10 +241,17 @@ class APIFiles(APIBase):
                                'lib', 'DFvisit_map'), 'r') as data:
             return data.read()
 
-    def data(self, plate, subjects=SubjectList(default_all=True)):
+    def data(self, plate, subjects=SubjectList(default_all=True),
+             missing_records=False, secondary_records=False):
         '''Returns patient data records for plate'''
+        rectypes = 'primary'
+        if missing_records:
+            rectypes += ',lost'
+        if secondary_records:
+            rectypes += ',secondary'
+
         args = ['/opt/dfdiscover/bin/DFexport.rpc',
-                '-s', 'lost,primary,secondary']
+                '-s', rectypes]
 
         if not subjects.empty:
             args.append('-I')
