@@ -36,7 +36,9 @@ setup(
     scripts = [
         'scripts/annotateCRF',
         'scripts/closeoutPDF',
+        'scripts/datachanges',
         'scripts/make_closeout_db',
+        'scripts/missingvalues',
         'scripts/updateinfo',
         'scripts/EClist',
         'scripts/QC2Excel',
