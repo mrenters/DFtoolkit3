@@ -1,0 +1,272 @@
+#!/usr/bin/env
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+Generate an Excel spreadsheet with a listing of all missing values
+in the database
+
+Martin Renters, March 2022
+'''
+
+import argparse
+import xlsxwriter
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.rangelist import (
+        SiteList, SubjectList, VisitList, PlateList, RangeListAction
+)
+from dftoolkit.errors import setup_logging, print_exception
+
+class Histogram:
+    '''
+    A class for tracking how many times a variable has been completed,
+    is blank, or has specific missing value codes
+    '''
+
+    def __init__(self, study):
+        self.blank = 0
+        self.completed = 0
+        self.missing = {}
+        for label in study.missingmap.values():
+            self.missing[label] = 0
+
+    def add_blank(self):
+        '''increment blank count'''
+        self.blank += 1
+
+    def add_completed(self):
+        '''increment completed count'''
+        self.completed += 1
+
+    def add_missing(self, label):
+        '''increment missing count'''
+        self.missing[label] += 1
+
+    def __repr__(self):
+        return '%d, %d, %s' % (self.blank, self.completed, self.missing)
+
+class MissingField:
+    '''a class for tracking a field with a missing value code'''
+    def __init__(self, pid, visit_num, plate, field, missing_label):
+        self.pid = pid
+        self.visit_num = visit_num
+        self.plate = plate
+        self.field = field
+        self.missing_label = missing_label
+
+    def __lt__(self, other):
+        return (self.pid, self.visit_num, self.plate.number,
+                self.field.number) < (other.pid, other.visit_num,
+                                      other.plate.number, other.field.number)
+
+    def __repr__(self):
+        return '%d, %d, %d, %d %s = %s' % (self.pid, self.visit_num,
+                                           self.plate.number,
+                                           self.field.number,
+                                           self.field.description,
+                                           self.missing_label)
+
+def find_missings(args, study):
+    '''a function for reporting on all missing value codes in a study'''
+    histogram = {}
+    missing_values = build_missings(args, study, histogram)
+    workbook = xlsxwriter.Workbook(args.xlsx)
+    header_format = workbook.add_format({
+        'text_wrap': True,
+        'bold': True,
+        'align': 'center',
+        'valign': 'vcenter'
+    })
+    number_format = workbook.add_format({
+        'align': 'center',
+        'num_format': '0'
+    })
+    string_format = workbook.add_format({
+        'align': 'left',
+        'text_wrap': True,
+        'num_format': '0'
+    })
+
+    # Generate Field histogram information
+    sheet = workbook.add_worksheet('Field Data')
+    colnames = [
+        ('Plate', 10),
+        ('Plate Description', 30),
+        ('Field', 10),
+        ('Field Description', 40),
+        ('Completed', 15),
+        ('Blank', 15)
+    ]
+    colnames.extend([(label, 15) \
+            for label in sorted(study.missingmap.values())])
+    for col, (_, width) in enumerate(colnames):
+        sheet.set_column(col, col, width)
+
+    row = 1
+    for plate in study.plates:
+        if plate.number not in args.plates:
+            continue
+        for field in plate.fields:
+            if field.is_system:
+                continue
+            counts = histogram[field]
+            sheet.write(row, 0, plate.number, number_format)
+            sheet.write(row, 1, plate.description, string_format)
+            sheet.write(row, 2, field.number, number_format)
+            sheet.write(row, 3, field.description, string_format)
+            if counts.completed:
+                sheet.write(row, 4, counts.completed, number_format)
+            else:
+                sheet.write_blank(row, 4, counts.completed, number_format)
+
+            if counts.blank:
+                sheet.write(row, 5, counts.blank, number_format)
+            else:
+                sheet.write_blank(row, 5, counts.blank, number_format)
+
+            for col, key in enumerate(sorted(counts.missing.keys()), 6):
+                count = counts.missing[key]
+                if count:
+                    sheet.write(row, col, count, number_format)
+                else:
+                    sheet.write_blank(row, col, count, number_format)
+            row += 1
+    if row > 1:
+        sheet.add_table(0, 0, row-1, len(colnames)-1, {
+            'autofilter': True,
+            'name': 'Field_Data',
+            'columns': [{'header': name, 'header_format': header_format} \
+                    for name, _ in colnames]})
+    else:
+        sheet.merge_range(0, 0, 0, len(colnames)-1, 'Nothing to report')
+
+    # Generate List of Missing Values
+    sheet = workbook.add_worksheet('Missing Values')
+    colnames = [
+        ('PID', 10),
+        ('Visit#', 10),
+        ('Visit', 30),
+        ('Plate#', 10),
+        ('Plate', 30),
+        ('Field#', 10),
+        ('Field Description', 40),
+        ('Missing Reason', 50),
+    ]
+    for col, (_, width) in enumerate(colnames):
+        sheet.set_column(col, col, width)
+
+    row = 1
+    for missing in sorted(missing_values):
+        sheet.write(row, 0, missing.pid, number_format)
+        sheet.write(row, 1, missing.visit_num, number_format)
+        sheet.write(row, 2, study.visit_label(missing.visit_num), string_format)
+        sheet.write(row, 3, missing.plate.number, number_format)
+        sheet.write(row, 4, study.page_label(missing.visit_num,
+                                             missing.plate.number),
+                    string_format)
+        sheet.write(row, 5, missing.field.number, number_format)
+        sheet.write(row, 6, missing.field.description, string_format)
+        sheet.write(row, 7, missing.missing_label, string_format)
+        row += 1
+
+    if row > 1:
+        sheet.add_table(0, 0, row-1, len(colnames)-1, {
+            'autofilter': True,
+            'name': 'Missing_Values',
+            'columns': [{'header': name, 'header_format': header_format} \
+                    for name, _ in colnames]})
+    else:
+        sheet.merge_range(0, 0, 0, len(colnames)-1, 'Nothing to report')
+
+    workbook.close()
+
+def build_missings(args, study, histogram):
+    '''a function for building a list of all missing values in a study'''
+    missing_values = []
+    for plate in study.plates:
+        if plate.number not in args.plates:
+            continue
+
+        for field in plate.fields:
+            histogram[field] = Histogram(study)
+
+        for record in study.data(plate, args.ids):
+            if record.visit_num not in args.visits:
+                continue
+            if record.missing or record.deleted:
+                continue
+            if study.sites.pid_to_site_number(record.pid) not in args.sites:
+                continue
+            for field in plate.fields:
+                value = record.field(field.number)
+                if value in study.missingmap:
+                    label = study.missingmap.get(value)
+                    histogram[field].add_missing(label)
+                    missing_values.append(MissingField(
+                        record.pid, record.visit_num, plate, field, label))
+                else:
+                    if not value or \
+                            (field.data_type in ('Choice', 'Check') and \
+                            value == str(field.codes[0][0])):
+                        histogram[field].add_blank()
+                    else:
+                        histogram[field].add_completed()
+
+    return missing_values
+
+
+def main():
+    '''command line interface to program'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='study directory')
+    parser.add_argument('--xlsx', default='missingvalues.xlsx',
+                        help='output Excel file (missingvalues.xlsx)')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='list of sites to include')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='list of ids to include')
+    parser.add_argument('--visits', default=VisitList(default_all=True),
+                        action=RangeListAction,
+                        help='list of visits to include')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='list of plates to include')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable debugging messages')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+
+    study = study_from_files(args.studydir, args.verbose)
+
+    try:
+        find_missings(args, study)
+    except Exception:
+        print_exception(args.verbose)
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        pass

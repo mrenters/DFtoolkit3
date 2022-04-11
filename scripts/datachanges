@@ -1,0 +1,220 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+
+'''
+This report generates an Excel file with all fields that the given
+users were the last to change.
+'''
+
+import argparse
+import re
+import sys
+
+from datetime import datetime
+from xlsxwriter import Workbook
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.sqldb import SQLDB
+from dftoolkit.audit import AuditOps
+from dftoolkit.rangelist import (
+        SiteList, SubjectList, VisitList, PlateList, RangeListAction
+)
+
+def get_audit_changes(record, context):
+    '''returns a list of audit changes last made by specified user(s)'''
+    study = context.get('study')
+    users = context.get('users', [])
+    audit = AuditOps(study, context.get('sql'))
+    uniqueids = study.field_uniqueids
+    auditrecs = audit.auditop_records(record, context.get('skip_blinded'))
+    field_changes = {}
+    last_auditrec = None
+    for auditrec in auditrecs:
+        if last_auditrec is None or \
+                last_auditrec.who != auditrec.who or \
+                last_auditrec.tdate != auditrec.tdate or \
+                last_auditrec.ttime != auditrec.ttime:
+            keychange = None
+
+        last_auditrec = auditrec
+
+        if auditrec.funiqueid == 0 and auditrec.ops[0][0] == 'r':
+            keychange = auditrec.ops[0]
+            continue
+
+        field = uniqueids.get(auditrec.funiqueid)
+        if not field:
+            continue
+        datachanges = list(filter(lambda x: x[0] == 'd', auditrec.ops))
+        if datachanges:
+            if not auditrec.who in users:
+                # forget about and changes to this field
+                field_changes.pop(field.number, None)
+            else:
+                # add us in as the changer of the field
+                if keychange:
+                    auditrec.ops.insert(0, keychange)
+                field_changes[field.number] = auditrec
+    return field_changes
+
+def datachanges_report(name, context):
+    '''generate an Excel file of all changes attributed to specified user(s)'''
+    sql = context.get('sql')
+    workbook = Workbook(name)
+    normal_format = workbook.add_format({
+        'valign': 'vcenter',
+        'text_wrap': True
+    })
+    date_format = workbook.add_format({
+        'valign': 'vcenter',
+        'align': 'center',
+        'num_format': 'yyyy-mm-dd hh:mm:ss',
+        'text_wrap': True
+    })
+    header_format = workbook.add_format({
+        'bold': True,
+        'font_color': 'white',
+        'bg_color': '#244062',
+        'align': 'center',
+        'valign': 'vcenter',
+        'border': 1
+    })
+
+    sheet = workbook.add_worksheet('DataChanges')
+    colnames = [
+        'PID',
+        'Visit',
+        'Plate',
+        'Field',
+        'Description',
+        'User',
+        'Timestamp',
+        'Changes'
+    ]
+    sheet.set_column(0, 0, 10)
+    sheet.set_column(1, 1, 10)
+    sheet.set_column(2, 2, 10)
+    sheet.set_column(3, 3, 10)
+    sheet.set_column(4, 4, 40)
+    sheet.set_column(5, 5, 15)
+    sheet.set_column(6, 6, 20)
+    sheet.set_column(7, 7, 80)
+    row = 1
+
+
+    for pid in sql.pidlist(context):
+        for record in sql.sorted_record_keys(pid, context):
+            field_changes = get_audit_changes(record, context)
+
+            for field_num, auditrec in sorted(field_changes.items()):
+                changetext = [re.sub('<[^>]*>', '', op) \
+                              for _, op in auditrec.ops]
+                try:
+                    (year, month, day) = map(int, auditrec.tdate.split('/'))
+                    (hour, minute, second) = map(int, auditrec.ttime.split(':'))
+                    timestamp = datetime(year, month, day, hour, minute, second)
+                except ValueError:
+                    timestamp = None
+
+                sheet.write(row, 0, record.pid, normal_format)
+                sheet.write(row, 1, record.visit_num, normal_format)
+                sheet.write(row, 2, record.plate_num, normal_format)
+                sheet.write(row, 3, field_num, normal_format)
+                sheet.write(row, 4, auditrec.desc, normal_format)
+                sheet.write(row, 5, auditrec.who, normal_format)
+                sheet.write(row, 6, timestamp, date_format)
+                sheet.write(row, 7, '\n'.join(changetext), normal_format)
+                row += 1
+
+    if row > 1:
+        sheet.add_table(0, 0, row-1, len(colnames)-1, {
+            'autofilter': True, 'first_column': True,
+            'name': 'DataChanges',
+            'columns': [{
+                'header': colname,
+                'header_format': header_format
+                } for colname in colnames]})
+
+    workbook.close()
+
+def main():
+    '''Command line interface to lasttouch'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--users', required=True,
+                        help='user(s) to report on (comma separated)')
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--db', default='data.db',
+                        help='intermediate database name (default data.db)')
+    parser.add_argument('--build', action='store_true',
+                        help='build the intermediate database first')
+    parser.add_argument('--xlsx', default='datachanges.xlsx',
+                        help='output Excel file (default auditdata.xlsx)')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed sites')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed subjects')
+    parser.add_argument('--visits', default=VisitList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed visits')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--skip-blinded', action='store_true',
+                        help='skip blinded fields')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+
+    args = parser.parse_args()
+
+    setup_logging(args.verbose)
+    study = study_from_files(args.studydir, args.verbose)
+    try:
+        sql = SQLDB(args.db)
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
+
+    if args.build:
+        try:
+            sql.initialize()
+            sql.populate(study, args.ids)
+        except Exception:
+            print_exception(args.verbose)
+
+    context = {
+        'study': study,
+        'sites': args.sites,
+        'pids': args.ids,
+        'visits': args.visits,
+        'plates': args.plates,
+        'skip_blinded': args.skip_blinded,
+        'users': args.users.split(','),
+        'sql': sql
+    }
+    datachanges_report(args.xlsx, context)
+
+if __name__ == '__main__':
+    main()
