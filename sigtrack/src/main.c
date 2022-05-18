@@ -29,7 +29,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#define VERSION	"3.0.6"
+#define VERSION	"3.0.7"
 
 int yyparse(void);
 int get_config_error_cnt(void);
