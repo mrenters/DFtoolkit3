@@ -124,6 +124,8 @@ def main():
                         help='page size letter/A4 (default: letter)')
     parser.add_argument('--watermark', default=None,
                         help='watermark to draw on each page')
+    parser.add_argument('--footer', default=None,
+                        help='footer message')
     parser.add_argument('--linearize', action='store_true',
                         help='linearize PDF file (Fast Web View)')
     parser.add_argument('--nice', action='store_true',
@@ -196,6 +198,7 @@ def main():
         'prefer_background': args.prefer_background,
         'pagesize': pagesize,
         'watermark': args.watermark,
+        'footer': args.footer,
         'nice': args.nice,
         'verbose': args.verbose,
         'multilingual': args.multilingual

@@ -21,8 +21,36 @@
 
 import os
 import unicodedata
+from io import StringIO
+from html.parser import HTMLParser
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
+
+class TagStripper(HTMLParser):
+    '''Strips HTML tages from a string'''
+    def __init__(self):
+        super().__init__()
+        self.text = StringIO()
+
+    def handle_starttag(self, tag, attrs):
+        '''convert <br/> tag to a space and strip all others'''
+        if tag.lower() == 'br':
+            self.text.write(' ')
+
+    def handle_data(self, data):
+        '''handle regular data by passing it through'''
+        self.text.write(data)
+
+    def get_data(self):
+        '''returns resulting string'''
+        self.close()
+        return self.text.getvalue()
+
+def strip_tags(text):
+    '''remove HTML tags from a string'''
+    stripper = TagStripper()
+    stripper.feed(text)
+    return stripper.get_data()
 
 font_groups = {}
 def enable_multilingual_fonts():

@@ -229,15 +229,12 @@ class CloseoutPDF:
 
     def page_header(self, canv, doc):
         '''Draw the page header and footer'''
+        if not self.record:
+            return
         properties_centered_bold = {
             'align': 'center',
             'font_size': 10,
             'font': bold_font()
-        }
-        properties_centered = {
-            'align': 'center',
-            'font_size': 10,
-            'font': regular_font()
         }
         properties_left = {
             'align': 'left',
@@ -268,10 +265,27 @@ class CloseoutPDF:
                           self.record.page_label, properties_left)
         label.draw(canv, color=black)
 
-        label = ECRFLabel(Rect(0, doc.pagesize[1]-60,
-                               doc.pagesize[0], doc.pagesize[1]-48),
+        # Footer message
+        if self.context.get('footer'):
+            label = ECRFLabel(Rect(inch, doc.pagesize[1]-60,
+                                   doc.pagesize[0]-inch, doc.pagesize[1]-48),
+                              self.context.get('footer'),
+                              {
+                                  'align': 'left',
+                                  'font_size': 8,
+                                  'font': regular_font()
+                              })
+            label.draw(canv, color=black)
+
+        # Page Number
+        label = ECRFLabel(Rect(inch, doc.pagesize[1]-60,
+                               doc.pagesize[0]-inch, doc.pagesize[1]-48),
                           'Page %d' % canv.getPageNumber(),
-                          properties_centered)
+                          {
+                              'align': 'right',
+                              'font_size': 10,
+                              'font': regular_font()
+                          })
         label.draw(canv, color=black)
 
 
@@ -467,6 +481,7 @@ class CloseoutPDF:
             flowables.extend(self.build_auditlistings(record))
             flowables.append(PageBreak())
 
+        self.record = None
         return flowables
 
     def build(self, pagesize=letter):

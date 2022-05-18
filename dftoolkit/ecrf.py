@@ -20,7 +20,7 @@
 from reportlab.lib.colors import black, blue
 from .rect import Rect
 from .texttools import TextSegment, segment_into_lines, get_font_info, \
-                       regular_font
+                       regular_font, strip_tags
 
 def layout_text(text, width, attribs=None):
     '''Layout text as ECRFLabel elements, breaking lines at width
@@ -28,6 +28,7 @@ def layout_text(text, width, attribs=None):
     if attribs is None:
         attribs = {}
 
+    text = strip_tags(text)
 
     font = attribs.setdefault('font', regular_font())
     font_size = attribs.setdefault('font_size', 10)
