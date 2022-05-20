@@ -17,23 +17,21 @@
 # You should have received a copy of the GNU General Public License
 # along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
 #
-'''Generate a PDF file with study annotation information'''
+'''Field level tests'''
 
 import unittest
-from dftoolkit import Study, APIFiles
+from dftoolkit import study_from_files
+from dftoolkit.rect import rect_groups
 
 class FieldTests(unittest.TestCase):
     def setUp(self):
-        api = APIFiles('/opt/studies/teckelworks')
-        self.study = Study(api)
-        if not self.study.load():
-            raise AssertianError('unable to load study')
+        self.study = study_from_files('/opt/studies/teckelworks', verbose=1)
 
     def test_boxgroups(self):
         plate = self.study.plate(1)
-        self.assertEqual(plate.field(6).box_groups, [3])
-        self.assertEqual(plate.field(7).box_groups, [2, 3])
-        self.assertEqual(plate.field(8).box_groups, [4, 2, 2])
+        self.assertEqual(rect_groups(plate.field(6).rects), [3])
+        self.assertEqual(rect_groups(plate.field(7).rects), [2, 3])
+        self.assertEqual(rect_groups(plate.field(8).rects), [4, 2, 2])
 
 if __name__ == '__main__':
     unittest.main()
