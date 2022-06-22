@@ -188,7 +188,10 @@ class Query:
         self.field_num = int(fields[7])+3
         self.site = study.sites.pid_to_site(self.pid)
         self.report = fields[9]
-        self.page_num = int(fields[10])
+        try:
+            self.page_num = int(fields[10])
+        except ValueError:
+            self.page_num = 0
         self.reply = fields[11]
         self.qc_description = fields[12]
         self.value = fields[13]
