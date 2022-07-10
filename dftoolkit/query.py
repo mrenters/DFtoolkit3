@@ -60,6 +60,9 @@ class QCStatus:
         self.label = label
         self.is_resolved = is_resolved
 
+    def __repr__(self):
+        return '<QCStatus %s, %s>' % (self.label, self.is_resolved)
+
 class QCStatusMap(dict):
     '''QC Status Map'''
     def __init__(self):
@@ -98,6 +101,11 @@ class QCStatusMap(dict):
 #############################################################################
 class QCType:
     '''A QC type construct'''
+
+    MISSINGPAGE = 21
+    OVERDUEVISIT = 22
+    ECMISSINGPAGE = 23
+
     def __init__(self, label, autoresolve, sortorder):
         self.label = label
         self.autoresolve = autoresolve == 1
@@ -117,9 +125,9 @@ class QCTypeMap(dict):
             4: QCType('Illegible', True, 0),
             5: QCType('Fax Noise', True, 0),
             6: QCType('Other', True, 0),
-            21: QCType('Missing Page', False, 0),
-            22: QCType('Overdue Visit', False, 0),
-            23: QCType('EC Missing Page', False, 0)
+            QCType.MISSINGPAGE: QCType('Missing Page', False, 0),
+            QCType.OVERDUEVISIT: QCType('Overdue Visit', False, 0),
+            QCType.ECMISSINGPAGE: QCType('EC Missing Page', False, 0)
         })
 
     @property
@@ -132,8 +140,8 @@ class QCTypeMap(dict):
         '''returns the label for a QC type code'''
 
         # Coalesce EC Missing page to Missing Page if simplify is True
-        if simplify and qc_type_code == 23:
-            qc_type_code = 21
+        if simplify and qc_type_code == QCType.ECMISSINGPAGE:
+            qc_type_code = QCType.MISSINGPAGE
 
         qc_type = self.get(qc_type_code)
         return qc_type.label if qc_type else 'unknown'
@@ -142,7 +150,8 @@ class QCTypeMap(dict):
         '''Returns a list of labels'''
         qctypes = list(self.items())
         if simplify:
-            qctypes = list(filter(lambda x: x[0] != 23, qctypes))
+            qctypes = list(filter(lambda x: x[0] != QCType.ECMISSINGPAGE,
+                                  qctypes))
 
         qctypes.sort(key=lambda x: (x[1].sortorder, x[0]))
         return [qctype.label for _, qctype in qctypes]
@@ -247,7 +256,8 @@ class Query:
     @property
     def page_query(self):
         '''return whether this a page query (missing page, overdue visit)'''
-        return 21 <= self.qctype <= 23
+        return self.qctype in (QCType.MISSINGPAGE, QCType.OVERDUEVISIT,
+                               QCType.ECMISSINGPAGE)
 
     def qctype_decoded(self, simplify=False):
         '''returns the Query type label'''
@@ -338,3 +348,12 @@ class Query:
     def resolved(self):
         '''returns datetime of query resolution'''
         return extract_date(self.resolution)
+
+    def __repr__(self):
+        return '<Query %d, %d, %d, %d: %s %s "%s">' % (self.pid,
+                                                       self.visit_num,
+                                                       self.plate_num,
+                                                       self.field_num,
+                                                       self.qctype_decoded(),
+                                                       self.status_decoded(),
+                                                       self.query)
