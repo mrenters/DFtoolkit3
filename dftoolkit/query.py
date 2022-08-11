@@ -134,7 +134,7 @@ class QCTypeMap(dict):
     def sorted_types(self):
         '''Return a list of QC type codes, sorted by priority'''
         types = sorted(self.items(), key=lambda x: (x[1].sortorder, x[0]))
-        return [code for code, _ in types]
+        return [(code, qctype.label) for code, qctype in types]
 
     def label(self, qc_type_code, simplify=False):
         '''returns the label for a QC type code'''
