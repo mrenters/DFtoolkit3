@@ -77,6 +77,11 @@ class Record:
         return reason
 
     @property
+    def final(self):
+        '''does this record have final status?'''
+        return self.fields[0] == '1'
+
+    @property
     def deleted(self):
         '''Is this a deleted record'''
         return self.fields[0] == '7'
