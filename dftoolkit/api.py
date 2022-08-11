@@ -25,6 +25,7 @@ import subprocess
 from PIL import Image
 
 from .rangelist import SubjectList
+from .schedule import ScheduleEntry
 
 class APIBase:
     # pylint: disable=no-self-use
@@ -90,6 +91,10 @@ class APIBase:
 
     def queries(self, subjects=SubjectList(default_all=True)):
         '''Returns query records'''
+        raise IOError
+
+    def schedules(self, subjects=SubjectList(default_all=True)):
+        '''Returns schedule records'''
         raise IOError
 
     def attachment(self, attachment):
@@ -293,6 +298,16 @@ class APIFiles(APIBase):
             yield record.rstrip('\n')
 
         proc.wait()
+
+    def schedules(self, subjects=SubjectList(default_all=True)):
+        '''Returns schedule records'''
+        with open(os.path.join(self.studydir, 'work',
+                               'DFX_schedule'), 'r') as data:
+            for line in data:
+                entry = ScheduleEntry.from_xschedule(line)
+                if entry.pid not in subjects:
+                    contine
+                yield entry
 
     def attachment(self, attachment):
         '''Return an attachment, may cause exception'''
