@@ -115,6 +115,11 @@ class ScheduleEntry:
                                                self.visit_date)
 
     @property
+    def is_cycle(self):
+        '''is this entry a cycle'''
+        return 'cycle_type' in self.items
+
+    @property
     def visit_number(self):
         '''return the visit number'''
         return self.items.get('visit_number')
