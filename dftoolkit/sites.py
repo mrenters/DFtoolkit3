@@ -122,6 +122,9 @@ class Site:
         self.region = region
         self.country = country
 
+    def __lt__(self, other):
+        return self.number < other.number
+
 #############################################################################
 # Sites - Site Database
 #############################################################################
