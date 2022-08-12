@@ -1,0 +1,92 @@
+#!/usr/bin/env python
+#
+# Copyright 2021-2022, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''Generate a data quality report'''
+
+import argparse
+
+from dftoolkit import __version__, study_from_files
+from dftoolkit.errors import setup_logging, print_exception
+from dftoolkit.dataquality import DataQualityReport
+from dftoolkit.rangelist import (
+    SiteList, SubjectList, VisitList, PlateList, RangeListAction
+)
+
+#####################################################################
+# MAIN
+#####################################################################
+def main():
+    '''Command line interface to data quality report'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='sets study directory')
+    parser.add_argument('--enrolled-subjects',
+                        help='file containing subjects to include')
+    parser.add_argument('--merge-mpqc', action='store_true',
+                        help='merge Missing Pages and EC Missing Page counts')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed sites')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed subjects')
+    parser.add_argument('--visits', default=VisitList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed visits')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--reports', default=VisitList(default_all=False),
+                        action=RangeListAction,
+                        help='which visits are report numbers')
+    parser.add_argument('--xlsx', default='dataquality.xlsx',
+                        help='output Excel filename')
+    parser.add_argument('--reportcards',
+                        help='output directory for report cards')
+    parser.add_argument('--rules',
+                        help='report card rules file')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging information')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+
+    args = parser.parse_args()
+    setup_logging(args.verbose)
+
+    study = study_from_files(args.studydir, args.verbose)
+
+    dataq = DataQualityReport(study, {
+        'sites': args.sites,
+        'ids': args.ids,
+        'visits': args.visits,
+        'plates': args.plates,
+        'reports': args.reports,
+        'merge_mpqc': args.merge_mpqc
+    })
+    if args.enrolled_subjects:
+        dataq.load_enrolled_patients(args.enrolled_subjects)
+    dataq.load_data_recs()
+    dataq.load_queries()
+    dataq.load_schedule()
+    dataq.generate_xlsx(args.xlsx)
+    if args.reportcards is not None and args.rules is not None:
+        dataq.generate_reportcards(args.rules, args.reportcards)
+
+if __name__ == '__main__':
+    main()
