@@ -97,9 +97,14 @@ class Record:
         return int(self.fields[0])
 
     @property
+    def pending(self):
+        '''Is this a pending record'''
+        return self.status == 3
+
+    @property
     def secondary(self):
         '''Is this a secondary record'''
-        return 3 <= self.status <= 6
+        return 4 <= self.status <= 6
 
     @property
     def level(self):
