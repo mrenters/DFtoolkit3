@@ -288,7 +288,7 @@ class DataQualityReport:
         ranking = sorted(site_metrics.items(),
                          key=lambda x: (x[1].percent_complete, x[1].nrecs),
                          reverse=True)
-        for rank, (site, data) in enumerate(site_metrics.items(), 1):
+        for rank, (site, data) in enumerate(ranking, 1):
             country_metrics[site.country] = data + \
                 country_metrics.get(site.country, QualityStats())
             setattr(data, 'global_rank', rank)
