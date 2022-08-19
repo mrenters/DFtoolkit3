@@ -130,10 +130,11 @@ class QCTypeMap(dict):
             QCType.ECMISSINGPAGE: QCType('EC Missing Page', False, 0)
         })
 
-    @property
-    def sorted_types(self):
+    def sorted_types(self, merge_mpqc):
         '''Return a list of QC type codes, sorted by priority'''
         types = sorted(self.items(), key=lambda x: (x[1].sortorder, x[0]))
+        if merge_mpqc:
+            types = filter(lambda x: x[0] != QCType.ECMISSINGPAGE, types)
         return [(code, qctype.label) for code, qctype in types]
 
     def label(self, qc_type_code, simplify=False):
