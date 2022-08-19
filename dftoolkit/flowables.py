@@ -22,6 +22,8 @@ columns, one of which can be longer than a single page. The Listing
 module will break the table accordingly.
 '''
 
+import bisect
+import math
 import re
 import logging
 
@@ -42,6 +44,17 @@ from .texttools import bold_font, regular_font
 
 truncated_color = HexColor(0xFFC0E2)
 missing_color = HexColor(0x88F45A)
+
+def tick_size(largest, most_ticks):
+    '''Calculate an appropriate size for each tick on the graph'''
+    minimum = largest // most_ticks
+    if minimum == 0:
+        return 1
+    magnitude = 10 ** math.floor(math.log(minimum, 10))
+    residual = minimum // magnitude
+    table = [1, 2, 3, 5, 7, 10]
+    tick = table[bisect.bisect(table, residual)] if residual < 10 else 10
+    return int(tick * magnitude)
 
 def watermark_page(doc, canvas, text):
     '''Draw a watermark in the middle of the page'''
@@ -787,3 +800,197 @@ class Listing(Flowable):
             path.lineTo(self.width, height + 2)
             path.close()
             canv.drawPath(path)
+
+#####################################################################
+# QCChart
+#####################################################################
+class QCChart(Flowable):
+    '''A QC Chart for report cards'''
+    def __init__(self, qc_types, metrics, grade=True):
+        super().__init__()
+        self.qc_types = qc_types
+        self.metrics = metrics
+        self.grade = grade
+
+    def wrap(self, availWidth, availHeight):
+        self.width = availWidth
+        self.height = len(self.qc_types)*14 + 28
+        return (availWidth, self.height)
+
+    def draw_grade(self, canvas):
+        '''draw the letter grade'''
+        grades = ['A+', 'A', 'A-', 'B', 'C', 'D']
+        breakpoints = [0.2, 0.5, 1, 2, 3]
+        qcs_per_pt = self.metrics.qcs_per_patient
+        letter = grades[bisect.bisect(breakpoints, qcs_per_pt)]
+        mid_y = self.height/2
+        canvas.setFont('Helvetica', 72)
+        canvas.setFillColor(HexColor('#1565C0'))
+        canvas.drawCentredString(60, mid_y-30, letter, mode=2)
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(black)
+        canvas.drawCentredString(60, mid_y-56,
+                                 'A+: <0.2; A: 0.2 < 0.5; A-: 0.5 < 1.0')
+        canvas.drawCentredString(60, mid_y-65,
+                                 'B: 1.0 < 2.0; C: 2.0 < 3.0; D: \u22653.0')
+        canvas.setFont('Helvetica-Bold', 10)
+        canvas.drawCentredString(60, mid_y-45, str(qcs_per_pt))
+
+    def draw_score(self, canvas):
+        '''draw a box with a numeric score'''
+        qcs_per_pt = self.metrics.qcs_per_patient
+        mid_y = self.height/2
+        canvas.setFont('Helvetica', 30)
+        canvas.setFillColor(HexColor('#1565C0'))
+        canvas.drawCentredString(60, mid_y-15, str(qcs_per_pt), mode=2)
+        canvas.setFont('Helvetica-Bold', 10)
+        canvas.setFillColor(black)
+        canvas.drawCentredString(60, mid_y-45, 'QCs/Patient')
+
+    def draw(self):
+        '''draws the QCChart'''
+        canvas = self.canv
+        canvas.saveState()
+        labels = [label for _, label in self.qc_types]
+        values = [self.metrics.qc_types[qc_type] \
+            for qc_type, _ in self.qc_types]
+
+        canvas.setStrokeColor(black)
+        canvas.setLineWidth(1)
+        canvas.rect(0, 0, 120, self.height)
+        canvas.setFont('Helvetica-Bold', 10)
+        canvas.setFillColor(black)
+        canvas.drawCentredString(60, self.height-25, 'Your Site')
+        canvas.drawCentredString(60, self.height-37, 'QCs/Patient Score')
+
+        if self.grade:
+            self.draw_grade(canvas)
+        else:
+            self.draw_score(canvas)
+
+        tick = tick_size(max(values), 10)
+
+        min_x = 215
+        max_x = self.width - 20
+        min_y = 20
+        path = canvas.beginPath()
+        path.moveTo(min_x, self.height)
+        path.lineTo(min_x, min_y)
+        path.lineTo(max_x, min_y)
+        canvas.drawPath(path)
+        canvas.setFont('Helvetica', 10)
+        step = float(max_x - min_x)/10
+        for i in range(0, 11):
+            x_pos = min_x + (step*i)
+            path = canvas.beginPath()
+            path.moveTo(x_pos, min_y)
+            path.lineTo(x_pos, min_y-5)
+            canvas.drawPath(path)
+            canvas.drawCentredString(min_x + (step*i), 5, str(tick*i))
+
+        for i, label in enumerate(labels):
+            y_pos = (min_y+5) + (i*14)
+            bar_len = (values[i]/(10*tick))*(max_x-min_x)
+            canvas.setFillColor(black)
+            canvas.drawRightString(min_x-5, y_pos, label)
+            canvas.drawString(min_x + bar_len + 5, y_pos, str(values[i]))
+            canvas.setFillColor(HexColor('#1565C0'))
+            canvas.rect(min_x, y_pos-2, bar_len, 11, fill=True)
+
+        canvas.restoreState()
+
+#####################################################################
+# RankingChart
+#####################################################################
+class RankingChart(Flowable):
+    '''a site ranking chart for report cards'''
+    def __init__(self, rankings, my_rank, grade=True):
+        super().__init__()
+        self.my_rank = my_rank     # 1-based
+        self.rankings = rankings
+        self.grade = grade
+
+    def wrap(self, availWidth, availHeight):
+        self.width = availWidth
+        self.height = 140
+        return (availWidth, self.height)
+
+    def draw_grade(self, completeness):
+        '''draw the letter grade'''
+        canvas = self.canv
+        grades = ['D', 'C', 'B', 'A-', 'A', 'A+']
+        breakpoints = [90, 95, 97, 98, 99]
+        letter = grades[bisect.bisect(breakpoints, completeness)]
+        canvas.setFont('Helvetica', 72)
+        canvas.drawCentredString(60, 40, letter, mode=2)
+        canvas.setFont('Helvetica', 7)
+        canvas.setFillColor(black)
+        canvas.drawCentredString(
+            60, 14, 'A+: >99; A: 98 \u2264 99; A-: 97 \u2264 98;')
+        canvas.drawCentredString(
+            60, 5, 'B: 95 \u2264 97; C: 90 \u2264 95; D: \u226490')
+        canvas.setFont('Helvetica-Bold', 10)
+        canvas.drawCentredString(60, 25, '{0:6.2f}%'.format(completeness))
+
+    def draw(self):
+        '''draws the QCChart'''
+        # We list a maximum of 10 sites, so if we're higher than that
+        # skip rank 10 to us and make us the last one
+        ranking_list = self.rankings
+        my_rank = self.my_rank
+        if self.my_rank > 10:
+            rankings_list = self.rankings[0:9]
+            rankings_list.append(self.rankings[self.my_rank-1])
+            my_rank = 10
+
+        _, metrics = ranking_list[my_rank-1]
+        completeness = metrics.percent_complete
+
+        canvas = self.canv
+        canvas.saveState()
+        canvas.setFont('Helvetica-Bold', 10)
+        canvas.setStrokeColor(black)
+        canvas.setFillColor(black)
+        canvas.drawCentredString(60, 115, 'Your Site')
+        canvas.drawCentredString(60, 103, 'Completeness Score')
+        canvas.setFillColor(HexColor('#1565C0'))
+        if self.grade:
+            self.draw_grade(completeness)
+        else:
+            canvas.setFont('Helvetica', 30)
+            canvas.drawCentredString(60, 55, str(completeness), mode=2)
+            canvas.setFont('Helvetica-Bold', 10)
+            canvas.setFillColor(black)
+
+        # Column headers
+        canvas.drawRightString(150, self.height-14, 'Rank')
+        canvas.drawString(155, self.height-14, 'Country')
+        canvas.drawString(250, self.height-14, 'Site')
+        canvas.drawRightString(500, self.height-14, 'Records')
+        canvas.drawRightString(564, self.height-14, '%Complete')
+
+        y_pos = 112
+        canvas.setFont('Helvetica', 10)
+        for rank, (site, metrics) in enumerate(ranking_list):
+            if rank == my_rank:
+                canvas.setFont('Helvetica-Bold', 10)
+                canvas.setFillColor(HexColor('#1565C0'))
+            else:
+                canvas.setFont('Helvetica', 10)
+                canvas.setFillColor(black)
+            canvas.drawRightString(150, y_pos, str(metrics.global_rank))
+            canvas.drawString(155, y_pos, site.country)
+            canvas.drawString(250, y_pos, site.name[0:35])
+            canvas.drawRightString(500, y_pos, str(metrics.nrecs))
+            canvas.drawRightString(564, y_pos, str(metrics.percent_complete))
+            y_pos = y_pos-12
+
+        canvas.setLineWidth(1)
+        path = canvas.beginPath()
+        path.moveTo(0, 0)
+        path.lineTo(0, self.height)
+        path.lineTo(120, self.height)
+        path.lineTo(120, 0)
+        path.close()
+        canvas.drawPath(path)
+        canvas.restoreState()
