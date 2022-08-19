@@ -25,7 +25,8 @@ import PIL
 from openpyxl import load_workbook
 from reportlab.lib.colors import black, white, grey
 from reportlab.platypus import (
-    BaseDocTemplate, PageTemplate, Frame, Paragraph, Image
+    BaseDocTemplate, PageTemplate, Frame, Paragraph, Image,
+    ListItem, ListFlowable
 )
 from reportlab.lib.styles import ParagraphStyle
 from reportlab.lib.enums import TA_LEFT, TA_CENTER
@@ -41,8 +42,8 @@ def evaluate(expression, data_fields):
 def excel_rules(filename):
     '''load reportcard rules from an Excel workbook'''
     rules = []
-    wb = load_workbook(filename)
-    for row in wb.active.rows:
+    workbook = load_workbook(filename)
+    for row in workbook.active.rows:
         operation = row[0].value.strip() \
             if len(row) > 0 and row[0].value else ''
         expression = row[1].value if len(row) > 1 else None
@@ -53,6 +54,7 @@ def excel_rules(filename):
 class ReportCard:
     '''An abstract report card class'''
     def __init__(self, filename):
+        self.filename = filename
         default_style = ParagraphStyle(
             'default',
             fontName='Helvetica',
@@ -65,7 +67,7 @@ class ReportCard:
             spaceBefore=0,
             spaceAfter=0,
             bulletFontName='Helvetica',
-            bulletFontSize=10,
+            bulletFontsize=10,
             bulletIndent=0,
             textColor=black,
             backColor=None,
@@ -130,21 +132,32 @@ class ReportCard:
         ])
         self.flowables = []
         self.statements = []
+        self.text_style = None
         self.handlers = {
             'title': self.header_handler,
             'smalltitle': self.header_handler,
             'section': self.header_handler,
             'logo': self.logo_handler,
-            'if': self.if_handler,
+            'text': self.if_handler,
+            'bullet': self.if_handler,
             'variables': self.variables_handler
         }
 
     def flush_statements(self):
         '''flush any queued statements to the output'''
-        if self.statements:
+        if not self.statements:
+            return
+        if self.text_style == 'text':
             self.flowables.append(Paragraph(' '.join(self.statements),
                                             self.styles['default']))
-            self.statements = []
+        elif self.text_style == 'bullet':
+            flowables = [ListItem(Paragraph(statement,
+                                            self.styles['default']),
+                                  bulletFontSize=8, leftIndent=36,
+                                  value='circle') \
+                for statement in self.statements]
+            self.flowables.append(ListFlowable(flowables, bulletType='bullet'))
+        self.statements = []
 
     def header_handler(self, operation, _expression, text, data_fields):
         '''deal with titles, smalltitles, and sections'''
@@ -177,8 +190,13 @@ class ReportCard:
         except IOError:
             raise ValueError(f'unable to open image: "{img_path}"')
 
-    def if_handler(self, _operation, expression, text, data_fields):
+    def if_handler(self, operation, expression, text, data_fields):
         '''handle conditional expressions'''
+        if operation != self.text_style:
+            self.flush_statements()
+
+        self.text_style = operation
+
         if isinstance(expression, str):
             try:
                 condition = evaluate(expression, data_fields)
@@ -201,17 +219,18 @@ class ReportCard:
         '''build the document'''
         ret = True
         for operation, expression, text  in rules:
-            if operation == 'operation':
+            if not operation or operation == 'operation':
                 continue
             function = self.handlers.get(operation)
             if function:
                 try:
                     function(operation, expression, text, data_fields)
                 except ValueError as err:
-                    logging.error(err)
+                    logging.error('%s: %s', self.filename, err)
                     ret = False
             else:
-                logging.error('unknown operation: "%s"', operation)
+                logging.error('%s: unknown operation: "%s"', self.filename,
+                              operation)
                 ret = False
 
         self.flush_statements()
