@@ -936,12 +936,13 @@ class RankingChart(Flowable):
         '''draws the QCChart'''
         # We list a maximum of 10 sites, so if we're higher than that
         # skip rank 10 to us and make us the last one
-        ranking_list = self.rankings
-        my_rank = self.my_rank
         if self.my_rank > 10:
-            rankings_list = self.rankings[0:9]
-            rankings_list.append(self.rankings[self.my_rank-1])
+            ranking_list = self.rankings[0:9]
+            ranking_list.append(self.rankings[self.my_rank-1])
             my_rank = 10
+        else:
+            ranking_list = self.rankings[0:10]
+            my_rank = self.my_rank
 
         _, metrics = ranking_list[my_rank-1]
         completeness = metrics.percent_complete
