@@ -971,7 +971,7 @@ class RankingChart(Flowable):
 
         y_pos = 112
         canvas.setFont('Helvetica', 10)
-        for rank, (site, metrics) in enumerate(ranking_list):
+        for rank, (site, metrics) in enumerate(ranking_list, 1):
             if rank == my_rank:
                 canvas.setFont('Helvetica-Bold', 10)
                 canvas.setFillColor(HexColor('#1565C0'))
