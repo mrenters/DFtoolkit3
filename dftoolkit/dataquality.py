@@ -19,12 +19,42 @@
 '''Data Quality Report classes'''
 
 from collections import Counter
+from datetime import date
 
 import logging
+import os
 from xlsxwriter import Workbook
 from xlsxwriter.utility import xl_rowcol_to_cell
 
+from dftoolkit.reportcards import excel_rules, ReportCard
 from dftoolkit.query import QCType
+from dftoolkit.mailmerge import MailMerge
+from dftoolkit.flowables import QCChart, RankingChart
+
+def add_data_fields(data_fields, qc_types, metrics, level):
+    '''add dictionary entries from a QualityStats object'''
+    data_fields[level + 'SubjectCount'] = metrics.npids
+    data_fields[level + 'RecordCount'] = metrics.nrecs
+    data_fields[level + 'FinalRecordCount'] = metrics.nfinalrecs
+    data_fields[level + 'IncompleteRecordCount'] = \
+        metrics.nrecs - metrics.nfinalrecs
+    data_fields[level + 'VisitsComplete'] = metrics.nvisits
+    data_fields[level + 'VisitsLost'] = metrics.nvisitslost
+    data_fields[level + 'ReportsComplete'] = metrics.nreports
+    data_fields[level + 'ExpectedRecordCount'] = metrics.expected_recs
+    data_fields[level + 'PercentComplete'] = metrics.percent_complete
+    data_fields[level + 'PercentFinal'] = metrics.percent_complete
+    data_fields[level + 'OutstandingQueryCount'] = metrics.total_qcs
+    data_fields[level + 'RecordsWithQueryCount'] = metrics.qc_nrecs
+    data_fields[level + 'QueriesPerSubject'] = metrics.qcs_per_patient
+    for qc_type, qc_name in qc_types:
+        qc_name = qc_name.replace(' ', '')
+        data_fields[level + 'Query' + qc_name + 'Count'] = \
+            metrics.qc_types[qc_type]
+
+def filter_rankings(rankings, country):
+    '''filter a ranking list by country'''
+    return filter(lambda entry: entry[0].country == country, rankings)
 
 #####################################################################
 # Quality Stats - Keeps track of quality statistics
@@ -80,12 +110,13 @@ class QualityStats:
     @property
     def qcs_per_patient(self):
         '''returns the number of QCs per patient'''
-        return self.total_qcs / self.npids if self.npids else 0.0
+        return round(self.total_qcs / self.npids if self.npids else 0.0, 2)
 
     @property
     def percent_final(self):
         '''returns the percentage of records that are final'''
-        return self.nfinalrecs / self.nrecs if self.nrecs else 0.0
+        return round(100 * self.nfinalrecs / self.nrecs \
+                     if self.nrecs else 0.0, 2)
 
     @property
     def percent_complete(self):
@@ -95,7 +126,7 @@ class QualityStats:
             complete_percent = self.nfinalrecs / (n_expected + 0.0)
         else:
             complete_percent = 0.0
-        return complete_percent
+        return round(100 * complete_percent, 2)
 
     def __add__(self, other):
         '''add two QualityStats objects and return the sum'''
@@ -254,22 +285,29 @@ class DataQualityReport:
             site_metrics[site] = data + \
                 site_metrics.get(site, QualityStats())
 
-        for site, data in site_metrics.items():
+        ranking = sorted(site_metrics.items(),
+                         key=lambda x: (x[1].percent_complete, x[1].nrecs))
+        for rank, (site, data) in enumerate(site_metrics.items(), 1):
             country_metrics[site.country] = data + \
                 country_metrics.get(site.country, QualityStats())
+            setattr(data, 'global_rank', rank)
 
-        return country_metrics, site_metrics
+        # Calculate ranking of site within country
+        for country in country_metrics:
+            for rank, (_, data) in enumerate(filter_rankings(ranking, country),
+                                             1):
+                setattr(data, 'country_rank', rank)
+
+        return ranking, country_metrics, site_metrics
 
     #################################################################
     # generate_xlsx - Generate an Excel report
     #################################################################
     def generate_xlsx(self, filename):
         '''generate Excel report'''
-        country_metrics, site_metrics = self.summarize()
-        qc_types = self.study.qc_types.sorted_types
-        if self.config.get('merge_mpqc', False):
-            qc_types = list(filter(lambda x: x[0] != QCType.ECMISSINGPAGE,
-                                   qc_types))
+        _, country_metrics, site_metrics = self.summarize()
+        qc_types = self.study.qc_types.sorted_types(
+            self.config.get('merge_mpqc', False))
 
         xlsx = DataQualityXLSX(filename,
                                self.study.study_name + ' Data Quality Report',
@@ -286,8 +324,45 @@ class DataQualityReport:
     #################################################################
     # generate_reportcards - Generate PDF report cards
     #################################################################
-    def generate_reportcards(self, rules, reportdir):
+    def generate_reportcards(self, rules_file, reportdir):
         '''generate PDF report cards'''
+        rules = excel_rules(rules_file)
+        rankings, country_metrics, site_metrics = self.summarize()
+        global_metrics = sum(country_metrics.values(), QualityStats())
+
+        os.makedirs(reportdir, exist_ok=True)
+        mailmerge = MailMerge(os.path.join(reportdir, 'mailmerge.xlsx'))
+
+        qc_types = self.study.qc_types.sorted_types(
+            self.config.get('merge_mpqc', False))
+        for site in sorted(site_metrics.keys()):
+            data_fields = {
+                'today': date.today().isoformat(),
+                'siteContact': site.contact,
+                'siteInvestigator': site.investigator,
+                'siteName': site.name,
+                'siteNumber': site.number,
+                'siteCountry': site.country,
+                'countrySiteRank': site_metrics[site].country_rank,
+                'globalSiteRank': site_metrics[site].global_rank,
+                '_rankings': rankings,
+                '_sitemetrics': site_metrics[site],
+                '_qc_types': qc_types
+            }
+            add_data_fields(data_fields, qc_types, global_metrics, 'global')
+            add_data_fields(data_fields, qc_types,
+                            country_metrics[site.country], 'country')
+            add_data_fields(data_fields, qc_types, site_metrics[site], 'site')
+
+            filename = 'dataquality-{}.pdf'.format(site.number)
+            reportcard = DataQualityReportCard(os.path.join(reportdir,
+                                                            filename))
+
+            # Add a mailmerge entry
+            if reportcard.build(rules, data_fields):
+                mailmerge.add_row(site, filename)
+
+        mailmerge.close()
 
 #####################################################################
 # DataQualityXLSX - The Excel Data Quality Report
@@ -603,9 +678,9 @@ class DataQualityXLSX:
         sheet.write(row, col+3, metrics.nconsecoverdue, number_format)
         sheet.write(row, col+4, metrics.nrecs, number_format)
         sheet.write(row, col+5, metrics.nfinalrecs, number_format)
-        sheet.write(row, col+6, metrics.percent_final, percent_format)
+        sheet.write(row, col+6, metrics.percent_final/100, percent_format)
         sheet.write(row, col+7, metrics.expected_recs, number_format)
-        sheet.write(row, col+8, metrics.percent_complete, percent_format)
+        sheet.write(row, col+8, metrics.percent_complete/100, percent_format)
         sheet.write(row, col+9, metrics.total_qcs, number_format)
         sheet.write(row, col+10, metrics.qc_nrecs, number_format)
         sheet.write(row, col+11, metrics.qcs_per_patient, float_format)
@@ -634,3 +709,35 @@ class DataQualityXLSX:
             ('Subject', 10, 'count')
         ])
         self.workbook.close()
+
+#####################################################################
+# DataQualityReportCard - The PDF Data Quality Report
+#####################################################################
+class DataQualityReportCard(ReportCard):
+    '''A PDF data quality report cards'''
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.handlers['global'] = self.rank_handler
+        self.handlers['global-nograde'] = self.rank_handler
+        self.handlers['country'] = self.rank_handler
+        self.handlers['country-nograde'] = self.rank_handler
+        self.handlers['qcs'] = self.qcs_handler
+        self.handlers['qcs-nograde'] = self.qcs_handler
+
+    def rank_handler(self, operation, _expression, _text, data_fields):
+        '''Add a ranking chart'''
+        rankings = data_fields['_rankings']
+        my_rank = data_fields['globalSiteRank']
+
+        if 'country' in operation:
+            rankings = list(filter_rankings(rankings,
+                                            data_fields['siteCountry']))
+            my_rank = data_fields['countrySiteRank']
+        self.flowables.append(RankingChart(rankings, my_rank,
+                                           'nograde' not in operation))
+
+    def qcs_handler(self, operation, _expression, _text, data_fields):
+        '''Add a ranking chart'''
+        self.flowables.append(QCChart(data_fields['_qc_types'],
+                                      data_fields['_sitemetrics'],
+                                      'nograde' not in operation))
