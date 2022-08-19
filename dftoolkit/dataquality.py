@@ -286,7 +286,8 @@ class DataQualityReport:
                 site_metrics.get(site, QualityStats())
 
         ranking = sorted(site_metrics.items(),
-                         key=lambda x: (x[1].percent_complete, x[1].nrecs))
+                         key=lambda x: (x[1].percent_complete, x[1].nrecs),
+                         reverse=True)
         for rank, (site, data) in enumerate(site_metrics.items(), 1):
             country_metrics[site.country] = data + \
                 country_metrics.get(site.country, QualityStats())
