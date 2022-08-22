@@ -516,10 +516,11 @@ class DataQualityXLSX:
         string_format = self.formats['string']
         self.site_sheet.write(self.site_row, 0, site.country, string_format)
         self.site_sheet.write(self.site_row, 1, site.number, number_format)
-        self.site_sheet.write(self.site_row, 2, site.investigator,
+        self.site_sheet.write(self.site_row, 2, site.name, string_format)
+        self.site_sheet.write(self.site_row, 3, site.investigator,
                               string_format)
-        self.site_sheet.write(self.site_row, 3, metrics.npids, number_format)
-        self.write_metrics(self.site_sheet, self.site_row, 4, metrics)
+        self.site_sheet.write(self.site_row, 4, metrics.npids, number_format)
+        self.write_metrics(self.site_sheet, self.site_row, 5, metrics)
         self.site_row += 1
 
     def add_subject_row(self, site, subject, metrics):
@@ -530,10 +531,12 @@ class DataQualityXLSX:
                                  string_format)
         self.subject_sheet.write(self.subject_row, 1, site.number,
                                  number_format)
-        self.subject_sheet.write(self.subject_row, 2, site.investigator,
+        self.subject_sheet.write(self.subject_row, 2, site.name,
                                  string_format)
-        self.subject_sheet.write(self.subject_row, 3, subject, number_format)
-        self.write_metrics(self.subject_sheet, self.subject_row, 4, metrics)
+        self.subject_sheet.write(self.subject_row, 3, site.investigator,
+                                 string_format)
+        self.subject_sheet.write(self.subject_row, 4, subject, number_format)
+        self.write_metrics(self.subject_sheet, self.subject_row, 5, metrics)
         self.subject_row += 1
 
     def add_table(self, sheet, table_name, row, columns):
@@ -700,12 +703,14 @@ class DataQualityXLSX:
         self.add_table(self.site_sheet, 'Sites', self.site_row, [
             ('Country', 15, 'count'),
             ('Site', 10, 'count'),
+            ('Site Name', 30, 'count'),
             ('Investigator', 30, 'count'),
             ('Subjects Recruited', 10, 'sum'),
         ])
         self.add_table(self.subject_sheet, 'Subjects', self.subject_row, [
             ('Country', 15, 'count'),
             ('Site', 10, 'count'),
+            ('Site Name', 30, 'count'),
             ('Investigator', 30, 'count'),
             ('Subject', 10, 'count')
         ])
