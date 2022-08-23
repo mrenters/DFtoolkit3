@@ -64,8 +64,8 @@ class ReportCard:
             rightIndent=0,
             firstLineIndent=0,
             alignment=TA_LEFT,
-            spaceBefore=0,
-            spaceAfter=0,
+            spaceBefore=3,
+            spaceAfter=3,
             bulletFontName='Helvetica',
             bulletFontsize=10,
             bulletIndent=0,
@@ -138,8 +138,9 @@ class ReportCard:
             'smalltitle': self.header_handler,
             'section': self.header_handler,
             'logo': self.logo_handler,
-            'text': self.if_handler,
-            'bullet': self.if_handler,
+            'text': self.text_handler,
+            'break': self.text_handler,
+            'bullet': self.text_handler,
             'variables': self.variables_handler
         }
 
@@ -147,37 +148,39 @@ class ReportCard:
         '''flush any queued statements to the output'''
         if not self.statements:
             return
-        if self.text_style == 'text':
-            self.flowables.append(Paragraph(' '.join(self.statements),
-                                            self.styles['default']))
-        elif self.text_style == 'bullet':
+        if self.text_style == 'bullet':
             flowables = [ListItem(Paragraph(statement,
                                             self.styles['default']),
                                   bulletFontSize=8, leftIndent=36,
                                   value='circle') \
                 for statement in self.statements]
-            self.flowables.append(ListFlowable(flowables, bulletType='bullet'))
+            self.flowables.append(ListFlowable(flowables,
+                                               bulletType='bullet'))
+        else:
+            self.flowables.append(Paragraph(' '.join(self.statements),
+                                            self.styles['default']))
         self.statements = []
 
-    def header_handler(self, operation, _expression, text, data_fields):
+    def header_handler(self, operation, text, data_fields):
         '''deal with titles, smalltitles, and sections'''
         self.flush_statements()
+        text = '' if text is None else text
         try:
             self.flowables.append(Paragraph(text.format(**data_fields),
                                             self.styles[operation]))
         except (ValueError, NameError, KeyError) as err:
             raise ValueError(f'{err} in message: "{text}"')
 
-    def variables_handler(self, _operation, _expression, _text, data_fields):
+    def variables_handler(self, _operation, _text, data_fields):
         '''dump all the data fields'''
         self.flush_statements()
-        for key, value in data_fields.items():
+        for key, value in sorted(data_fields.items()):
             if key.startswith('_'):
                 continue
             self.flowables.append(Paragraph(f'{key} = {value}',
                                             self.styles['default']))
 
-    def logo_handler(self, _operation, _expression, img_path, _data_fields):
+    def logo_handler(self, _operation, img_path, _data_fields):
         '''insert a logo into the reportcard'''
         self.flush_statements()
         try:
@@ -190,25 +193,14 @@ class ReportCard:
         except IOError:
             raise ValueError(f'unable to open image: "{img_path}"')
 
-    def if_handler(self, operation, expression, text, data_fields):
+    def text_handler(self, operation, text, data_fields):
         '''handle conditional expressions'''
         if operation != self.text_style:
             self.flush_statements()
 
         self.text_style = operation
 
-        if isinstance(expression, str):
-            try:
-                condition = evaluate(expression, data_fields)
-            except (ValueError, NameError) as err:
-                raise ValueError(f'{err} in condition: "{expression}"')
-            except SyntaxError as err:
-                raise ValueError(f'syntax error in condition: "{expression}"')
-        else:
-            condition = expression
-
-        if not condition:
-            return
+        text = '' if text is None else text
 
         try:
             self.statements.append(text.format(**data_fields))
@@ -222,15 +214,40 @@ class ReportCard:
             if not operation or operation == 'operation':
                 continue
             function = self.handlers.get(operation)
-            if function:
-                try:
-                    function(operation, expression, text, data_fields)
-                except ValueError as err:
-                    logging.error('%s: %s', self.filename, err)
-                    ret = False
-            else:
+            if not function:
                 logging.error('%s: unknown operation: "%s"', self.filename,
                               operation)
+                ret = False
+                continue
+
+            # Evaluate expression
+            if isinstance(expression, str) and expression != '':
+                try:
+                    condition = evaluate(expression, data_fields)
+                except (ValueError, NameError) as err:
+                    logging.error('%s: %s in condition "%s"', self.filename,
+                                  err, expression)
+                    ret = False
+                    continue
+                except SyntaxError as err:
+                    logging.error('%s: syntax error in condition "%s"',
+                                  self.filename, expression)
+                    ret = False
+                    continue
+            elif expression is None or expression == '':
+                condition = True
+            else:
+                condition = expression
+
+            # if expression is False then skip this operation
+            if not condition:
+                continue
+
+            # Call the operation handler
+            try:
+                function(operation, text, data_fields)
+            except ValueError as err:
+                logging.error('%s: %s', self.filename, err)
                 ret = False
 
         self.flush_statements()
