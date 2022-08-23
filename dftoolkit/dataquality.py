@@ -43,9 +43,11 @@ def add_data_fields(data_fields, qc_types, metrics, level):
     data_fields[level + 'ReportsComplete'] = metrics.nreports
     data_fields[level + 'ExpectedRecordCount'] = metrics.expected_recs
     data_fields[level + 'PercentComplete'] = metrics.percent_complete
-    data_fields[level + 'PercentFinal'] = metrics.percent_complete
+    data_fields[level + 'PercentFinal'] = metrics.percent_final
     data_fields[level + 'OutstandingQueryCount'] = metrics.total_qcs
-    data_fields[level + 'RecordsWithQueryCount'] = metrics.qc_nrecs
+    data_fields[level + 'QueryOutstandingGt60daysCount'] = \
+        metrics.qc_gt60days
+    data_fields[level + 'RecordWithQueryCount'] = metrics.qc_nrecs
     data_fields[level + 'QueriesPerSubject'] = metrics.qcs_per_patient
     for qc_type, qc_name in qc_types:
         qc_name = qc_name.replace(' ', '')
@@ -332,7 +334,7 @@ class DataQualityReport:
         global_metrics = sum(country_metrics.values(), QualityStats())
 
         os.makedirs(reportdir, exist_ok=True)
-        mailmerge = MailMerge(os.path.join(reportdir, 'mailmerge.xlsx'))
+        mailmerge = MailMerge(os.path.join(reportdir, 'mailmerge.xlsm'))
 
         qc_types = self.study.qc_types.sorted_types(
             self.config.get('merge_mpqc', False))
@@ -345,6 +347,8 @@ class DataQualityReport:
                 'siteNumber': site.number,
                 'siteCountry': site.country,
                 'countrySiteRank': site_metrics[site].country_rank,
+                'globalCountryCount': len(country_metrics),
+                'globalSiteCount': len(site_metrics),
                 'globalSiteRank': site_metrics[site].global_rank,
                 '_rankings': rankings,
                 '_sitemetrics': site_metrics[site],
@@ -723,27 +727,25 @@ class DataQualityReportCard(ReportCard):
     '''A PDF data quality report cards'''
     def __init__(self, filename):
         super().__init__(filename)
-        self.handlers['global'] = self.rank_handler
-        self.handlers['global-nograde'] = self.rank_handler
-        self.handlers['country'] = self.rank_handler
-        self.handlers['country-nograde'] = self.rank_handler
-        self.handlers['qcs'] = self.qcs_handler
-        self.handlers['qcs-nograde'] = self.qcs_handler
+        self.handlers['chart'] = self.chart_handler
 
-    def rank_handler(self, operation, _expression, _text, data_fields):
-        '''Add a ranking chart'''
-        rankings = data_fields['_rankings']
-        my_rank = data_fields['globalSiteRank']
+    def chart_handler(self, _operation, text, data_fields):
+        '''Add a chart'''
+        options = text.replace(',', ' ').split()
+        grade = 'nograde' not in options
 
-        if 'country' in operation:
-            rankings = list(filter_rankings(rankings,
+        if 'qcs' in options:
+            self.flowables.append(QCChart(data_fields['_qc_types'],
+                                          data_fields['_sitemetrics'],
+                                          grade))
+        elif 'country' in options:
+            rankings = list(filter_rankings(data_fields['_rankings'],
                                             data_fields['siteCountry']))
             my_rank = data_fields['countrySiteRank']
-        self.flowables.append(RankingChart(rankings, my_rank,
-                                           'nograde' not in operation))
-
-    def qcs_handler(self, operation, _expression, _text, data_fields):
-        '''Add a ranking chart'''
-        self.flowables.append(QCChart(data_fields['_qc_types'],
-                                      data_fields['_sitemetrics'],
-                                      'nograde' not in operation))
+            self.flowables.append(RankingChart(rankings, my_rank, grade))
+        elif 'global' in options:
+            rankings = data_fields['_rankings']
+            my_rank = data_fields['globalSiteRank']
+            self.flowables.append(RankingChart(rankings, my_rank, grade))
+        else:
+            raise ValueError(f'unknown chart type "{text}"')
