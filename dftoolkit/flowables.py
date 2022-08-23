@@ -832,7 +832,7 @@ class QCChart(Flowable):
         canvas.drawCentredString(60, mid_y-56,
                                  'A+: <0.2; A: 0.2 < 0.5; A-: 0.5 < 1.0')
         canvas.drawCentredString(60, mid_y-65,
-                                 'B: 1.0 < 2.0; C: 2.0 < 3.0; D: \u22653.0')
+                                 'B: 1.0 < 2.0; C: 2.0 < 3.0; D: \u2265 3.0')
         canvas.setFont('Helvetica-Bold', 10)
         canvas.drawCentredString(60, mid_y-45, str(qcs_per_pt))
 
@@ -892,7 +892,7 @@ class QCChart(Flowable):
             y_pos = (min_y+5) + (i*14)
             bar_len = (values[i]/(10*tick))*(max_x-min_x)
             canvas.setFillColor(black)
-            canvas.drawRightString(min_x-5, y_pos, label)
+            canvas.drawRightString(min_x-5, y_pos, label[0:18])
             canvas.drawString(min_x + bar_len + 5, y_pos, str(values[i]))
             canvas.setFillColor(HexColor('#1565C0'))
             canvas.rect(min_x, y_pos-2, bar_len, 11, fill=True)
@@ -928,7 +928,7 @@ class RankingChart(Flowable):
         canvas.drawCentredString(
             60, 14, 'A+: >99; A: 98 \u2264 99; A-: 97 \u2264 98;')
         canvas.drawCentredString(
-            60, 5, 'B: 95 \u2264 97; C: 90 \u2264 95; D: \u226490')
+            60, 5, 'B: 95 \u2264 97; C: 90 \u2264 95; D: \u2264 90')
         canvas.setFont('Helvetica-Bold', 10)
         canvas.drawCentredString(60, 25, '{0:6.2f}%'.format(completeness))
 
