@@ -39,8 +39,9 @@ def add_data_fields(data_fields, qc_types, metrics, level):
     data_fields[level + 'IncompleteRecordCount'] = \
         metrics.nrecs - metrics.nfinalrecs
     data_fields[level + 'VisitsComplete'] = metrics.nvisits
-    data_fields[level + 'VisitsLost'] = metrics.nvisitslost
+    data_fields[level + 'VisitsMissed'] = metrics.nvisitslost
     data_fields[level + 'ReportsComplete'] = metrics.nreports
+    data_fields[level + 'ReportsMissed'] = metrics.nreportslost
     data_fields[level + 'ExpectedRecordCount'] = metrics.expected_recs
     data_fields[level + 'PercentComplete'] = metrics.percent_complete
     data_fields[level + 'PercentFinal'] = metrics.percent_final
@@ -68,8 +69,9 @@ class QualityStats:
         self.nrecs = 0
         self.nfinalrecs = 0
         self.nvisits = 0
-        self.nreports = 0
         self.nvisitslost = 0
+        self.nreports = 0
+        self.nreportslost = 0
         self.nconsecoverdue = 0
         self.qc_nrecs = 0
         self.qc_gt60days = 0
@@ -137,8 +139,9 @@ class QualityStats:
         res.nrecs = self.nrecs + other.nrecs
         res.nfinalrecs = self.nfinalrecs + other.nfinalrecs
         res.nvisits = self.nvisits + other.nvisits
-        res.nreports = self.nreports + other.nreports
         res.nvisitslost = self.nvisitslost + other.nvisitslost
+        res.nreports = self.nreports + other.nreports
+        res.nreportslost = self.nreportslost + other.nreportslost
         res.nconsecoverdue = self.nconsecoverdue + other.nconsecoverdue
         res.qc_nrecs = self.qc_nrecs + other.qc_nrecs
         res.qc_gt60days = self.qc_gt60days + other.qc_gt60days
@@ -262,7 +265,10 @@ class DataQualityReport:
 
                     # If this is a report, count it is a report
                     if entry.visit_number in reports_filter:
-                        patient.nreports += 1
+                        if entry.visit_status == 'missed':
+                            patient.nreportslost += 1
+                        else:
+                            patient.nreports += 1
                     elif entry.visit_status == 'missed':
                         patient.nvisitslost += 1
                     else:
@@ -554,6 +560,7 @@ class DataQualityXLSX:
             ('Visits Completed', 10, 'sum'),
             ('Reports Completed', 10, 'sum'),
             ('Visits Marked Missed', 10, 'sum'),
+            ('Reports Marked Missed', 10, 'sum'),
             ('Blocks of Consecutive Overdue Visits', 10, 'sum,gt0')
         ]
         data_quality = [
@@ -671,7 +678,7 @@ class DataQualityXLSX:
                 # Beware of cell offsets!
                 formula = '=IFERROR({qcs}/{npids}, 0.0)'.format(
                     qcs=xl_rowcol_to_cell(row, col-2),
-                    npids=xl_rowcol_to_cell(row, col-12))
+                    npids=xl_rowcol_to_cell(row, col-13))
 
             sheet.write(row, col, formula, cell_format)
 
@@ -683,18 +690,19 @@ class DataQualityXLSX:
         sheet.write(row, col, metrics.nvisits, number_format)
         sheet.write(row, col+1, metrics.nreports, number_format)
         sheet.write(row, col+2, metrics.nvisitslost, number_format)
-        sheet.write(row, col+3, metrics.nconsecoverdue, number_format)
-        sheet.write(row, col+4, metrics.nrecs, number_format)
-        sheet.write(row, col+5, metrics.nfinalrecs, number_format)
-        sheet.write(row, col+6, metrics.percent_final/100, percent_format)
-        sheet.write(row, col+7, metrics.expected_recs, number_format)
-        sheet.write(row, col+8, metrics.percent_complete/100, percent_format)
-        sheet.write(row, col+9, metrics.total_qcs, number_format)
-        sheet.write(row, col+10, metrics.qc_nrecs, number_format)
-        sheet.write(row, col+11, metrics.qcs_per_patient, float_format)
-        sheet.write(row, col+12, metrics.qc_gt60days, number_format)
+        sheet.write(row, col+3, metrics.nreportslost, number_format)
+        sheet.write(row, col+4, metrics.nconsecoverdue, number_format)
+        sheet.write(row, col+5, metrics.nrecs, number_format)
+        sheet.write(row, col+6, metrics.nfinalrecs, number_format)
+        sheet.write(row, col+7, metrics.percent_final/100, percent_format)
+        sheet.write(row, col+8, metrics.expected_recs, number_format)
+        sheet.write(row, col+9, metrics.percent_complete/100, percent_format)
+        sheet.write(row, col+10, metrics.total_qcs, number_format)
+        sheet.write(row, col+11, metrics.qc_nrecs, number_format)
+        sheet.write(row, col+12, metrics.qcs_per_patient, float_format)
+        sheet.write(row, col+13, metrics.qc_gt60days, number_format)
         for qc_col, (qc_type, _) in enumerate(self.qc_types):
-            sheet.write(row, col+qc_col+13, metrics.qc_types[qc_type],
+            sheet.write(row, col+qc_col+14, metrics.qc_types[qc_type],
                         number_format)
         return col
 
