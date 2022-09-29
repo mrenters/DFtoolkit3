@@ -211,6 +211,7 @@ class ReportCard:
         '''build the document'''
         ret = True
         for operation, expression, text  in rules:
+            data_fields['statements'] = self.statements
             if not operation or operation == 'operation':
                 continue
             function = self.handlers.get(operation)
