@@ -845,7 +845,7 @@ class QCChart(Flowable):
         canvas.drawCentredString(60, mid_y-15, str(qcs_per_pt), mode=2)
         canvas.setFont('Helvetica-Bold', 10)
         canvas.setFillColor(black)
-        canvas.drawCentredString(60, mid_y-45, 'QCs/Patient')
+        canvas.drawCentredString(60, mid_y-45, 'Queriess/Subject')
 
     def draw(self):
         '''draws the QCChart'''
@@ -861,7 +861,7 @@ class QCChart(Flowable):
         canvas.setFont('Helvetica-Bold', 10)
         canvas.setFillColor(black)
         canvas.drawCentredString(60, self.height-25, 'Your Site')
-        canvas.drawCentredString(60, self.height-37, 'QCs/Patient Score')
+        canvas.drawCentredString(60, self.height-37, 'Queriess/Subject Score')
 
         if self.grade:
             self.draw_grade(canvas)
