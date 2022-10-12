@@ -306,7 +306,7 @@ class APIFiles(APIBase):
             for line in data:
                 entry = ScheduleEntry.from_xschedule(line)
                 if entry.pid not in subjects:
-                    contine
+                    continue
                 yield entry
 
     def attachment(self, attachment):
