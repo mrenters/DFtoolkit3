@@ -24,8 +24,9 @@ from xlsxwriter.workbook import Workbook
 columns = [
     ('Site', 10),
     ('Country', 15),
-    ('Site Name', 60),
-    ('Contact', 60),
+    ('Site Name', 50),
+    ('Contact', 40),
+    ('Investigator', 40),
     ('Email', 60),
     ('Attachment', 40)
 ]
@@ -65,8 +66,9 @@ class MailMerge:
             self.sheet.write(self.row, 1, site.country, self.wrap_format)
             self.sheet.write(self.row, 2, site.name, self.wrap_format)
             self.sheet.write(self.row, 3, site.contact, self.wrap_format)
-            self.sheet.write(self.row, 4, email, self.wrap_format)
-            self.sheet.write(self.row, 5, path, self.wrap_format)
+            self.sheet.write(self.row, 4, site.investigator, self.wrap_format)
+            self.sheet.write(self.row, 5, email, self.wrap_format)
+            self.sheet.write(self.row, 6, path, self.wrap_format)
             self.row += 1
 
     def close(self):
@@ -76,7 +78,8 @@ class MailMerge:
         else:
             self.sheet.merge_range(0, 3, 0, len(columns)-1,
                 'E-Mail Template Variables: {SITE}, {COUNTRY}, '
-                '{SITENAME}, {CONTACT}, {DATE}', self.wrap_format)
+                '{SITENAME}, {CONTACT}, {INVESTIGATOR}, {DATE}',
+                self.wrap_format)
             self.sheet.insert_button(0, 0, {
                 'macro': '\'Create_Email "no"\'',
                 'caption': 'Create Emails',
