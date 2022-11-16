@@ -37,6 +37,7 @@ setup(
         'scripts/annotateCRF',
         'scripts/closeoutPDF',
         'scripts/datachanges',
+        'scripts/dataquality',
         'scripts/make_closeout_db',
         'scripts/missingvalues',
         'scripts/updateinfo',
