@@ -32,6 +32,8 @@ setup(
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
         'Programming Language :: Python :: 3.8',
+        'Programming Language :: Python :: 3.9',
+        'Programming Language :: Python :: 3.10',
     ],
     scripts = [
         'scripts/annotateCRF',
@@ -44,6 +46,14 @@ setup(
         'scripts/EClist',
         'scripts/QC2Excel',
         'scripts/schema2excel',
+    ],
+    install_requires=[
+        'requests>=2.24.0',
+        'pikepdf>=2.12.2',
+        'reportlab>=3.5.67',
+        'openpyxl>=3.0.10',
+        'XlsxWriter>=3.0.1',
+        'pdfrw>=0.4'
     ],
     package_data={'dftoolkit': ['fonts/*', 'vba/*']},
     #data_files = [ pkg_data('dftoolkit/fonts'), pkg_data('dftoolkit/vba') ]
