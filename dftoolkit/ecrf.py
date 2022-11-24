@@ -55,13 +55,27 @@ class ECRFLabel(Rect):
         if isinstance(label, str):
             font = attribs.get('font', regular_font())
             font_size = attribs.get('font_size', 14)
-            width, fragments = get_font_info(label, font)
-            width = (width * font_size) / 1000.0
-            if attribs.get('allow_scaling', False) and width > rect.width-5:
-                scale = (rect.width-5)/width
-                width *= scale
-                font_size *= scale
-                self.scale_centered(scale)
+            try_label = label
+            while True:
+                width, fragments = get_font_info(try_label, font)
+                width = (width * font_size) / 1000.0
+                # If the label fits, we're good
+                if width <= rect.width-5:
+                    break
+
+                # Are we allowed to scale to fit?
+                if attribs.get('allow_scaling', False):
+                    scale = (rect.width-5)/width
+                    width *= scale
+                    font_size *= scale
+                    self.scale_centered(scale)
+                    break
+
+                # Otherwise reduce by a letter at a time until it fits
+                label = label[:-1]
+                if not label:
+                    break
+                try_label = label + '\u2026'
 
             label = TextSegment(width, font_size, fragments)
 
