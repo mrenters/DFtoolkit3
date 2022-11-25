@@ -56,23 +56,25 @@ class ECRFLabel(Rect):
             font = attribs.get('font', regular_font())
             font_size = attribs.get('font_size', 14)
             try_label = label
+            rect_width = rect.width-5 if rect.width > 5 else 1
             while True:
                 width, fragments = get_font_info(try_label, font)
                 width = (width * font_size) / 1000.0
                 # If the label fits, we're good
-                if width <= rect.width-5:
+                if width <= rect_width:
                     break
 
                 # Are we allowed to scale to fit?
                 if attribs.get('allow_scaling', False):
-                    scale = (rect.width-5)/width
+                    scale = rect_width / width
                     width *= scale
                     font_size *= scale
                     self.scale_centered(scale)
                     break
 
-                # Otherwise reduce by a letter at a time until it fits
-                label = label[:-1]
+                # Otherwise reduce label and add ellipsis
+                try_len = int(len(label) * rect_width / width)
+                label = label[:try_len]
                 if not label:
                     break
                 try_label = label + '\u2026'
