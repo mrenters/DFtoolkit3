@@ -29,7 +29,7 @@ from .record import Record
 
 logger = logging.getLogger(__name__)
 
-key_change_reason = 'Keys changed from ['
+KEY_CHANGE_REASON = 'Keys changed from ['
 
 db_statements = [
     '''pragma page_size=4096''',
@@ -242,7 +242,7 @@ class SQLDB:
 
             # If this is a key change reason, treat it as a record wide
             # operation
-            if rec_type == 'r' and codetext.startswith(key_change_reason):
+            if rec_type == 'r' and codetext.startswith(KEY_CHANGE_REASON):
                 # If we are deleting the reason, skip recording it
                 if operation == 'D':
                     continue
@@ -399,7 +399,7 @@ class SQLDB:
             # For key changes, mark this for all fields
             if this_rec.rectype == 'r' and this_rec.metafnum == 0 and \
                 this_rec.op != 'D' and \
-                this_rec.reason.startswith(key_change_reason):
+                this_rec.reason.startswith(KEY_CHANGE_REASON):
                 this_rec = this_rec._replace(funiqueid=0, fnum=0, desc='')
 
             audit_recs.append(
