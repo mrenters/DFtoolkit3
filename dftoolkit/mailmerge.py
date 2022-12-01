@@ -76,7 +76,8 @@ class MailMerge:
         if self.row == TABLE_START_ROW+1:
             self.sheet.merge_range(0, 0, 0, len(columns)-1, 'Nothing to report')
         else:
-            self.sheet.merge_range(0, 3, 0, len(columns)-1,
+            self.sheet.merge_range(
+                0, 3, 0, len(columns)-1,
                 'E-Mail Template Variables: {SITE}, {COUNTRY}, '
                 '{SITENAME}, {CONTACT}, {INVESTIGATOR}, {DATE}',
                 self.wrap_format)
