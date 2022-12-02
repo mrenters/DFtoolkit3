@@ -121,11 +121,18 @@ class Study:
         '''
         return sorted(self._modules.values(), key=lambda x: x.name.lower())
 
-    def module(self, module_id):
+    def module_by_id(self, module_id):
         '''Returns a reference to the module object with ID module_id'''
-        module = self._modules.get(module_id)
+        module = self._module_ids.get(module_id)
         if not module:
             raise ValueError('Module %d is not defined' % (module_id))
+        return module
+
+    def module_by_name(self, module_name):
+        '''Returns a reference to the module object with name module_name'''
+        module = self._modules.get(module_name)
+        if not module:
+            raise ValueError('Module "%s" is not defined' % (module_name))
         return module
 
     def add_field(self, field):
