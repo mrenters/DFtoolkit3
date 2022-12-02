@@ -287,6 +287,9 @@ class Style(FieldBase):
         super().load_setup(json)
         study.add_style(self)
 
+    def __repr__(self):
+        return '<Style %s>' % (self.style_name)
+
 ##############################################################################
 # Field Class
 ##############################################################################
@@ -297,6 +300,10 @@ class Field(FieldBase):
         self._module = module
         super().load_setup(json)
         module.add_field(self)
+
+    def __repr__(self):
+        return '<Field %d %s (%s)>' % (self.unique_id, self.name,
+                                       self.description)
 
 ##############################################################################
 # FieldRef Class - FieldRefs of a ModuleRef
@@ -313,8 +320,8 @@ class FieldRef(FieldBase):
                  for rect in json.get('rects', [])]
 
         # Get the Field ID that this FieldRef is from and retrieve the style
-        self.field_id = json.get('fieldId')
-        self.style_name = self._study.field(self.field_id).style_name
+        self.field = self._study.field(json.get('fieldId'))
+        self.style_name = self.field.style_name
 
         self.group_field_id = json.get('groupFieldId', self.unique_id)
         self.coding_columns = json.get('codingColumns', 1)
