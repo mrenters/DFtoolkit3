@@ -69,6 +69,9 @@ class Module:
                 return field
         return None
 
+    def __repr__(self):
+        return '<Module %d (%s)>' % (self.unique_id, self.name)
+
 
 ##############################################################################
 # ModuleRef Class - ModuleRefs of a Plate
@@ -76,6 +79,7 @@ class Module:
 class ModuleRef:
     '''ModuleRef representation class'''
     def __init__(self, plate, json):
+        study = plate.study
         self._plate = plate
         self._unique_id = None
         self._field_refs = {}
@@ -83,10 +87,9 @@ class ModuleRef:
         self._unique_id = json.get('id')
         self.instance = json.get('instance', 0)
         self.name = json.get('name')
-        self.module_id = json.get('moduleId')
+        self.module = study.module_by_id(json.get('moduleId'))
         self.user_properties = CaseInsensitiveDict()
 
-        study = plate.study
         for userprop in json.get('userProperties', []):
             alias = study.user_property_tags.get(userprop.get('name'))
             if alias:
@@ -125,3 +128,6 @@ class ModuleRef:
     def add_fieldref(self, fieldref):
         '''Add a FieldRef to this ModuleRef'''
         self._field_refs[fieldref.unique_id] = fieldref
+
+    def __repr__(self):
+        return '<ModuleRef %d (%s)>' % (self.unique_id, self.identifier)
