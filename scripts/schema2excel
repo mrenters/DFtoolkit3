@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
 #
-'''Generate an Excel file of all the edit checks in a study'''
+'''Generate an Excel file of all the fields in a study'''
 
 import argparse
 import logging
@@ -59,11 +59,11 @@ colnames = [
 ]
 
 #####################################################################
-# ECList - Generate an Excel sheet with a list of all fields and
-#   edit checks attached to each one.
+# Schema2Excel - Generate an Excel sheet with a list of all fields
+#   and their properties
 #####################################################################
 def schema2excel(study, xlsx, plate_list):
-    '''Create an Excel file with a list of edit checks'''
+    '''Create an Excel file with a list of fields in the study'''
     logging.info('Creating Spreadsheet')
     workbook = xlsxwriter.Workbook(xlsx)
 
@@ -82,7 +82,7 @@ def schema2excel(study, xlsx, plate_list):
         'text_wrap': True
     })
 
-    sheet = workbook.add_worksheet('ECs')
+    sheet = workbook.add_worksheet('Schema')
 
     sheet.set_row(0, 72)
     for col, (_, width) in enumerate(colnames):
@@ -126,7 +126,7 @@ def schema2excel(study, xlsx, plate_list):
         sheet.write(0, 0, 'No plates defined')
     else:
         sheet.add_table(0, 0, row-1, len(colnames)-1, {
-            'autofilter': True, 'name': 'EC_Details',
+            'autofilter': True, 'name': 'Schema_Details',
             'columns': [{'header': colname, 'header_format': header_format} \
                  for colname, _ in colnames]
             })
