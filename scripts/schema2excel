@@ -22,7 +22,6 @@
 import argparse
 import logging
 import os
-import sys
 import xlsxwriter
 
 from dftoolkit import __version__, study_from_files
