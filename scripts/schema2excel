@@ -117,8 +117,10 @@ def schema2excel(study, xlsx, plate_list):
             sheet.write(row, 22, field.field_enter, wrap_format)
             sheet.write(row, 23, field.field_exit, wrap_format)
             sheet.write(row, 24, field.plate_exit, wrap_format)
-            sheet.write(row, 25, '\n'.join('{}={}'.format(code, label) \
-                for code, label in field.codes), wrap_format)
+            sheet.write(row, 25, '\n'.join('{}{}{}={}'.format(
+                code, '' if submission is None else '=',
+                '' if submission is None else submission, label) \
+                for code, label, submission in field.codes), wrap_format)
             row += 1
 
     if row == 1:

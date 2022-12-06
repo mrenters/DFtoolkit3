@@ -138,9 +138,11 @@ def make_field_entry(field, annotate):
         Paragraph(htmlify(field.expanded_legal_range, regular_font()),
                   default_style)
     codes = [Paragraph(
-        htmlify('{}\u2192'.format(code[0]), bold_font()) + \
-        htmlify(code[1], italic_font()), default_style) \
-        for code in field.codes]
+        htmlify('{}\u2192'.format(box), bold_font()) + \
+        (htmlify('{}\u2192'.format(submission), bold_font()) \
+        if submission else '') + \
+        htmlify(label, italic_font()), default_style) \
+        for box, label, submission in field.codes]
     flowables = [num, name, ftype, desc, legal_vals, codes]
     list_entry = ListEntry(flowables)
     list_entry.set_callback(annotate.begin_field, field.number)

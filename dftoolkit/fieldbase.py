@@ -234,7 +234,8 @@ class FieldBase:
         self.vas_right_value = json.get('rightValue')
         self.codes = []
         for code in json.get('codes', []):
-            self.codes.append((code['number'], code['label']))
+            self.codes.append((code['number'], code['label'],
+                               code.get('subLabel')))
 
         for userprop in json.get('userProperties', []):
             alias = self._study.user_property_tags.get(userprop.get('name'))
@@ -264,16 +265,24 @@ class FieldBase:
     ##########################################################################
     def decode(self, value):
         '''Decode a value returning its code'''
+        box, label, _ = self.decode_with_submission(value)
+        return (box, label)
+
+    ##########################################################################
+    # decode_submission
+    ##########################################################################
+    def decode_with_submission(self, value):
+        '''Decode a value returning its label and submission value'''
         box = None
         if self.data_type == 'Choice' or self.data_type == 'Check':
-            for code in self.codes:
-                if str(code[0]) == str(value):
-                    return (box, code[1])
+            for code, label, submission in self.codes:
+                if str(code) == str(value):
+                    return (box, label, submission)
                 if box is None:
                     box = 0
                 else:
                     box += 1
-        return (None, value)
+        return (None, value, value)
 
 
 ##############################################################################
