@@ -35,7 +35,7 @@ class Site:
         self.fax = ''
         self.region = 'Unknown'
         self.country = 'Unknown'
-        self.begin_date = '1234'
+        self.begin_date = None
         self.end_date = None
         self.enroll = 0
         self.protocol1 = ''
