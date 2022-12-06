@@ -18,7 +18,7 @@
 #
 '''DFtoolkit module'''
 
-__version__ = '3.1.0'
+__version__ = '3.1.1'
 __VERSION__ = __version__
 
 import sys
