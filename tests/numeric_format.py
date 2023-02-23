@@ -29,6 +29,9 @@ class NumericFormats(unittest.TestCase):
                      Rect(75, 25, 100, 50), Rect(100, 25, 125, 50)]
         self.nn_nn = [Rect(25, 25, 50, 50), Rect(50, 25, 75, 50),
                       Rect(80, 25, 105, 50), Rect(105, 25, 130, 50)]
+        # Misaligned set of three boxes
+        self.nn_n = [Rect(211,194,238,221), Rect(237,195,263,220),
+                      Rect(278,195,304,220)]
 
     def test_simple(self):
         self.assertEqual(reformat_numeric('n', '1'), ('1', None))
@@ -48,6 +51,7 @@ class NumericFormats(unittest.TestCase):
         self.assertEqual(reformat_numeric('nn.n', '1'), ('01.0', None))
         self.assertEqual(reformat_numeric('nn.n', '1.0'), ('01.0', None))
         self.assertEqual(reformat_numeric('nn.n', '1.'), ('01.0', None))
+        self.assertEqual(reformat_numeric('nn.n', '03.5'), ('03.5', None))
         self.assertEqual(reformat_numeric('nn.nn', '1.12'), ('01.12', None))
         self.assertEqual(reformat_numeric('Snn.nn', '1.12'), ('+01.12', None))
         self.assertEqual(reformat_numeric('Snn.nn', '-1.12'), ('-01.12', None))
@@ -118,6 +122,8 @@ class NumericFormats(unittest.TestCase):
                          ('', None))
         self.assertEqual(multibox_numeric('', '', self.nn_nn),
                          ('', None))
+        self.assertEqual(multibox_numeric('nn.n', '03.5', self.nn_n),
+                         ('035', None))
 
 if __name__ == '__main__':
     unittest.main()

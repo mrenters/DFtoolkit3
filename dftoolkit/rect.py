@@ -108,7 +108,8 @@ class Rect:
 
     def is_adjacent_horizontal(self, rect):
         ''' Checks whether rect is adjacent with self '''
-        if self.top == rect.top and self.bottom == rect.bottom and \
+        if rect.top-1 <= self.top <= rect.top+1 and \
+            rect.bottom-1 <= self.bottom <= rect.bottom+1 and \
             rect.left-1 <= self.right < rect.right:
             return True
         return False
