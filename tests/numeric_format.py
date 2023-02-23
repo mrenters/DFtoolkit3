@@ -30,8 +30,8 @@ class NumericFormats(unittest.TestCase):
         self.nn_nn = [Rect(25, 25, 50, 50), Rect(50, 25, 75, 50),
                       Rect(80, 25, 105, 50), Rect(105, 25, 130, 50)]
         # Misaligned set of three boxes
-        self.nn_n = [Rect(211,194,238,221), Rect(237,195,263,220),
-                      Rect(278,195,304,220)]
+        self.nn_n = [Rect(211, 194, 238, 221), Rect(237, 195, 263, 220),
+                     Rect(278, 195, 304, 220)]
 
     def test_simple(self):
         self.assertEqual(reformat_numeric('n', '1'), ('1', None))
