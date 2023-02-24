@@ -224,6 +224,11 @@ class Plate:
         self._module_refs[moduleref.unique_id] = moduleref
 
     @property
+    def modulerefs(self):
+        '''returns a list of all modulerefs'''
+        return self._module_refs.values()
+
+    @property
     def first_page(self):
         '''Returns the first page of the plate'''
         return self.pages[0] if self.pages else None
