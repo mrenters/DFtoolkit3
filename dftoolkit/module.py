@@ -43,8 +43,6 @@ class Module:
         for field_json in json.get('fields', []):
             Field(self, field_json)
 
-        self._fields.sort(key=lambda x: x.name.lower())
-
         study.add_module(self)
 
     @property
@@ -57,6 +55,11 @@ class Module:
         '''Returns a module's unique ID'''
         return self._unique_id
 
+    @property
+    def fields(self):
+        '''get a list of fields in this module'''
+        return self._fields
+
     def add_field(self, field):
         '''Add a field to a module and study'''
         self._fields.append(field)
@@ -66,6 +69,13 @@ class Module:
         '''Returns a field by its unique ID'''
         for field in self._fields:
             if field.unique_id == unique_id:
+                return field
+        return None
+
+    def field_by_name(self, name):
+        '''Returns a field by its name'''
+        for field in self._fields:
+            if field.name == name:
                 return field
         return None
 
@@ -128,6 +138,22 @@ class ModuleRef:
     def add_fieldref(self, fieldref):
         '''Add a FieldRef to this ModuleRef'''
         self._field_refs[fieldref.unique_id] = fieldref
+
+    @property
+    def virtual_fields(self):
+        '''get a dict of virtual fields (user properties) and their values'''
+        field_values = {}
+        for userprop, value in self.user_properties.items():
+            # Check if this is a user property starting with XX (e.g. XXTERM)
+            if not userprop.startswith('XX'):
+                continue
+
+            # Swap XX out with module name, (e.g. AE, XXTERM->AETERM)
+            field = self.module.field_by_name(self.name + userprop[2:])
+            if field:
+                field_values[field] = value
+
+        return field_values
 
     def __repr__(self):
         return '<ModuleRef %d (%s)>' % (self.unique_id, self.identifier)
