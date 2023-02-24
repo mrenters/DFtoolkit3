@@ -52,6 +52,50 @@ class Attachment:
         '''Is this attachment a PDF?'''
         return self.data and self.data[0:4] == b'%PDF'
 
+class FieldValue:
+    '''A class for combining a field with its value'''
+    def __init__(self, field, value):
+        self.field = field
+        self.value = value
+
+    @property
+    def name(self):
+        'returns the field name'
+        return self.field.name
+
+    @property
+    def missing_value(self):
+        'returns True/False if value is a missing value code'
+        missing, _ = self.field.missing_value(self.value)
+        return missing
+
+    @property
+    def missing_label(self):
+        'returns True/False if value is a missing value code'
+        _, label = self.field.missing_value(self.value)
+        return label
+
+    @property
+    def expanded_alias(self):
+        'returns the field expanded alias'
+        return self.field.expanded_alias
+
+    @property
+    def label(self):
+        'returns the field label'
+        _, label, _ = self.field.decode_with_submission(self.value)
+        return label
+
+    @property
+    def submission(self):
+        'returns the field submission label or codiding label if not available'
+        _, label, submission = self.field.decode_with_submission(self.value)
+        return submission or label
+
+    def __repr__(self):
+        return '<FieldValue %s=%s>' % (self.field.name, self.value)
+
+
 class Record:
     '''A class to encapsulate a DFdiscover record'''
 
@@ -192,6 +236,23 @@ class Record:
     def field_missing_value_label(self, num):
         '''What is the missing value label'''
         return self.study.missingmap.get(self.field(num))
+
+    @property
+    def field_values(self):
+        '''return the field values as a list of FieldValue objects.'''
+        plate_fields = self.plate.fields
+
+        # Return missing (lost) record with just keys and creation/modification
+        if self.missing:
+            fields = [(field, field.number) \
+                      for field in plate_fields[0:7]]
+            # DFCREATE/DFMODIFY are in fields 10,11 in missing records
+            fields.append((plate_fields[-2], 10))
+            fields.append((plate_fields[-1], 11))
+        else:
+            fields = [(field, field.number) for field in plate_fields]
+
+        return [FieldValue(field, self.field(fnum)) for field, fnum in fields]
 
     def __repr__(self):
         return '<Record %d, %d, %d>' % (self.pid, self.visit_num,
