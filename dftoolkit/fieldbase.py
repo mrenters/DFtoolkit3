@@ -272,7 +272,7 @@ class FieldBase:
     # decode_submission
     ##########################################################################
     def decode_with_submission(self, value):
-        '''Decode a value returning its label and submission value'''
+        '''Decode a value returning its box number, label, submission values'''
         box = None
         if self.data_type == 'Choice' or self.data_type == 'Check':
             for code, label, submission in self.codes:
@@ -284,6 +284,25 @@ class FieldBase:
                     box += 1
         return (None, value, value)
 
+    ##########################################################################
+    # missing_value
+    ##########################################################################
+    def missing_value(self, value):
+        '''Check whether value is a missing value and return status, label'''
+        if value in self._study.missingmap:
+            return (True, self._study.missingmap.get(value))
+        return (False, '')
+
+    @property
+    def export_max_storage(self):
+        '''returns the maximum amount of storage needed for export'''
+        max_len = self.store
+        for _, label, submission in self.codes:
+            if label:
+                max_len = max(max_len, len(label))
+            if submission:
+                max_len = max(max_len, len(submission))
+        return max_len
 
 ##############################################################################
 # Style Class
@@ -309,6 +328,11 @@ class Field(FieldBase):
         self._module = module
         super().load_setup(json)
         module.add_field(self)
+
+    @property
+    def module(self):
+        '''Get the module this field belongs to'''
+        return self._module
 
     def __repr__(self):
         return '<Field %d %s (%s)>' % (self.unique_id, self.name,
