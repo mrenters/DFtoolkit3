@@ -274,7 +274,7 @@ class FieldBase:
     def decode_with_submission(self, value):
         '''Decode a value returning its box number, label, submission values'''
         box = None
-        if self.data_type == 'Choice' or self.data_type == 'Check':
+        if self.data_type in ('Choice', 'Check', 'Number'):
             for code, label, submission in self.codes:
                 if str(code) == str(value):
                     return (box, label, submission)
