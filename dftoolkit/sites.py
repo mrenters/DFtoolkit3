@@ -69,7 +69,7 @@ class Site:
 
         # decode attributes
         variable_map = {
-            'county': 'country',
+            'country': 'country',
             'beginDate': 'begin_date',
             'endDate': 'end_date',
             'enroll': 'enroll',
