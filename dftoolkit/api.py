@@ -93,6 +93,10 @@ class APIBase:
         '''Returns query records'''
         raise IOError
 
+    def reasons(self, subjects=SubjectList(default_all=True)):
+        '''Returns reason records'''
+        raise IOError
+
     def schedules(self, subjects=SubjectList(default_all=True)):
         '''Returns schedule records'''
         raise IOError
@@ -288,6 +292,29 @@ class APIFiles(APIBase):
         # Add study, plate, -
         args.append(str(self.studynum))
         args.append('511')
+        args.append('-')
+        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
+        for data in proc.stdout:
+            try:
+                record = data.decode('utf-8')
+            except UnicodeDecodeError:
+                record = data.decode('latin-1')
+            yield record.rstrip('\n')
+
+        proc.wait()
+
+    def reasons(self, subjects=SubjectList(default_all=True)):
+        '''Returns reason records'''
+        args = ['/opt/dfdiscover/bin/DFexport.rpc',
+                '-s', 'all']
+
+        if not subjects.empty:
+            args.append('-I')
+            args.append(str(subjects))
+
+        # Add study, plate, -
+        args.append(str(self.studynum))
+        args.append('510')
         args.append('-')
         proc = subprocess.Popen(args, stdout=subprocess.PIPE)
         for data in proc.stdout:

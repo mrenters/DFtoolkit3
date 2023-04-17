@@ -27,7 +27,7 @@ from xlsxwriter import Workbook
 from xlsxwriter.utility import xl_rowcol_to_cell
 
 from dftoolkit.reportcards import excel_rules, ReportCard
-from dftoolkit.query import QCType
+from dftoolkit.metadata import QCType
 from dftoolkit.mailmerge import MailMerge
 from dftoolkit.flowables import QCChart, RankingChart
 

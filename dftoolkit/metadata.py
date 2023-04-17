@@ -21,7 +21,8 @@
 from datetime import datetime, date
 
 #############################################################################
-# extract_user, extract_date - returns user or date from a query timestamp
+# extract_user, extract_date - returns user or date from a query or
+# reason timestamp (username yy/mm/dd hh:mm:ss)
 #############################################################################
 def extract_user(user_ts):
     '''extract the username from a query timestamp'''
@@ -52,7 +53,112 @@ def extract_date(user_ts):
     return datetime(year, month, day, hour, minute, second)
 
 #############################################################################
-# QCStatusMap - Reason Status Map
+# MetaData - base class for metadata (queries and reasons)
+#############################################################################
+class MetaData:
+    '''Metadata representation'''
+    def __init__(self, study, fields):
+        if isinstance(fields, str):
+            fields = fields.split('|')
+
+        if len(fields) < 8:
+            raise ValueError('Incorrectly formatted Metadata: ' + \
+                             '|'.join(fields))
+
+        self.study = study
+        self.status = int(fields[0])
+        self.level = int(fields[1])
+        self.plate_num = int(fields[4])
+        self.visit_num = int(fields[5])
+        self.pid = int(fields[6])
+        self.field_num = int(fields[7])+3
+        self.site = study.sites.pid_to_site(self.pid)
+        self.creation = ''
+        self.modification = ''
+
+    def __lt__(self, other):
+        if self.site.number < other.site.number:
+            return True
+        if self.site.number > other.site.number:
+            return False
+        if self.pid < other.pid:
+            return True
+        if self.pid > other.pid:
+            return False
+        if self.visit_num < other.visit_num:
+            return True
+        if self.visit_num > other.visit_num:
+            return False
+        if self.plate_num < other.plate_num:
+            return True
+        if self.plate_num > other.plate_num:
+            return False
+        if self.field_num < other.field_num:
+            return True
+        return False
+
+    @property
+    def visit(self):
+        '''returns visit object'''
+        return self.study.visit(self.visit_num)
+
+    @property
+    def visit_label(self):
+        '''returns decoded visit label'''
+        return self.study.visit_label(self.visit_num)
+
+    @property
+    def plate(self):
+        '''returns plate object'''
+        return self.study.plate(self.plate_num)
+
+    @property
+    def plate_label(self):
+        '''returns decoded plate label'''
+        return self.study.page_label(self.visit_num, self.plate_num)
+
+    @property
+    def field(self):
+        '''returns the field object for this QC'''
+        plate = self.plate
+        return plate.field(self.field_num) if plate else None
+
+    @property
+    def description(self):
+        '''returns field description from field definition'''
+        field = self.field
+        return field.description if field else ''
+
+    @property
+    def priority(self):
+        '''returns QC priority'''
+        field = self.field
+        return field.priority if field else 5
+
+    @property
+    def creator(self):
+        '''returns user who created query'''
+        return extract_user(self.creation)
+
+    @property
+    def created(self):
+        '''returns datetime of query creation'''
+        return extract_date(self.creation)
+
+    @property
+    def modifier(self):
+        '''returns user who modified query'''
+        return extract_user(self.modification)
+
+    @property
+    def modified(self):
+        '''returns datetime of query modification'''
+        return extract_date(self.modification)
+
+
+
+#############################################################################
+# QCStatusMap - Query Status Map
 #############################################################################
 class QCStatus:
     '''QC Status representation'''
@@ -180,7 +286,7 @@ class QCTypeMap(dict):
 #############################################################################
 # Query - A Quality Control Note
 #############################################################################
-class Query:
+class Query(MetaData):
     '''Query (Quality Control note) representation'''
     def __init__(self, study, fields):
         if isinstance(fields, str):
@@ -189,14 +295,7 @@ class Query:
         if len(fields) < 22:
             raise ValueError('Incorrectly formatted Query: ' + '|'.join(fields))
 
-        self.study = study
-        self.status = int(fields[0])
-        self.level = int(fields[1])
-        self.plate_num = int(fields[4])
-        self.visit_num = int(fields[5])
-        self.pid = int(fields[6])
-        self.field_num = int(fields[7])+3
-        self.site = study.sites.pid_to_site(self.pid)
+        MetaData.__init__(self, study, fields)
         self.report = fields[9]
         try:
             self.page_num = int(fields[10])
@@ -214,26 +313,6 @@ class Query:
         self.resolution = fields[20]
         self.usage = int(fields[21])
 
-    def __lt__(self, other):
-        if self.site.number < other.site.number:
-            return True
-        if self.site.number > other.site.number:
-            return False
-        if self.pid < other.pid:
-            return True
-        if self.pid > other.pid:
-            return False
-        if self.visit_num < other.visit_num:
-            return True
-        if self.visit_num > other.visit_num:
-            return False
-        if self.plate_num < other.plate_num:
-            return True
-        if self.plate_num > other.plate_num:
-            return False
-        if self.field_num < other.field_num:
-            return True
-        return False
 
     def status_decoded(self, simplify=False):
         '''return a decoded status label'''
@@ -265,44 +344,6 @@ class Query:
         return self.study.qc_types.label(self.qctype, simplify)
 
     @property
-    def visit(self):
-        '''returns visit object'''
-        return self.study.visit(self.visit_num)
-
-    @property
-    def visit_label(self):
-        '''returns decoded visit label'''
-        return self.study.visit_label(self.visit_num)
-
-    @property
-    def plate(self):
-        '''returns plate object'''
-        return self.study.plate(self.plate_num)
-
-    @property
-    def plate_label(self):
-        '''returns decoded plate label'''
-        return self.study.page_label(self.visit_num, self.plate_num)
-
-    @property
-    def field(self):
-        '''returns the field object for this QC'''
-        plate = self.plate
-        return plate.field(self.field_num) if plate else None
-
-    @property
-    def description(self):
-        '''returns field description from field definition'''
-        field = self.field
-        return field.description if field else ''
-
-    @property
-    def priority(self):
-        '''returns QC priority'''
-        field = self.field
-        return field.priority if field else 5
-
-    @property
     def usage_decoded(self):
         '''decode the Query use field to external/internal'''
         return 'Internal' if self.usage == 2 else 'External'
@@ -313,32 +354,12 @@ class Query:
         return 'Yes' if self.refax == 2 else 'No'
 
     @property
-    def creator(self):
-        '''returns user who created query'''
-        return extract_user(self.creation)
-
-    @property
-    def created(self):
-        '''returns datetime of query creation'''
-        return extract_date(self.creation)
-
-    @property
     def age(self):
         '''returns age of query if unresolved'''
         created = self.created
         if not created or self.is_resolved:
             return None
         return (date.today() - created.date()).days
-
-    @property
-    def modifier(self):
-        '''returns user who modified query'''
-        return extract_user(self.modification)
-
-    @property
-    def modified(self):
-        '''returns datetime of query modification'''
-        return extract_date(self.modification)
 
     @property
     def resolver(self):
@@ -358,3 +379,34 @@ class Query:
                                                        self.qctype_decoded(),
                                                        self.status_decoded(),
                                                        self.query)
+
+#############################################################################
+# Reason - A reason for change record
+#############################################################################
+class Reason(MetaData):
+    '''Reason representation'''
+    def __init__(self, study, fields):
+        if isinstance(fields, str):
+            fields = fields.split('|')
+
+        if len(fields) < 12:
+            raise ValueError('Incorrectly formatted Reason: ' + \
+                             '|'.join(fields))
+
+        MetaData.__init__(self, study, fields)
+        self.reason_code = fields[8]
+        self.reason_text = fields[9]
+        self.creation = fields[10]
+        self.modification = fields[11]
+
+    def status_decoded(self):
+        '''return a decoded status label'''
+        return self.study.reason_statuses.label(self.status)
+
+    def __repr__(self):
+        return '<Reason %d, %d, %d, %d: %s "%s">' % (self.pid,
+                                                     self.visit_num,
+                                                     self.plate_num,
+                                                     self.field_num,
+                                                     self.status_decoded(),
+                                                     self.reason_text)

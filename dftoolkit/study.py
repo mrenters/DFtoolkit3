@@ -28,7 +28,7 @@ from .module import Module
 from .visitmap import VisitMap
 from .pagemap import PageMap
 from .lookup import LevelMap, MissingMap, ReasonStatusMap
-from .query import  QCStatusMap, QCTypeMap, Query
+from .metadata import  QCStatusMap, QCTypeMap, Query, Reason
 from .record import Record
 from .sites import Sites
 from .rangelist import PlateList, SubjectList
@@ -362,6 +362,11 @@ class Study:
     ########################################################################
     # Reason Related functions
     ########################################################################
+    def reasons(self, subjects=SubjectList(default_all=True)):
+        '''Returns a Reason structure based on raw reason record'''
+        for record in self.api.reasons(subjects):
+            yield Reason(self, record)
+
     def reason_status(self, value):
         '''Get reason status label'''
         if not isinstance(value, int):
