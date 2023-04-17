@@ -26,7 +26,7 @@ from .api import APIFiles
 from .study import Study
 from .errors import print_exception
 
-def study_from_files(studydir, verbose):
+def study_from_files(studydir, verbose=0):
     '''load a study from files and terminate on error'''
     try:
         api = APIFiles(studydir)
