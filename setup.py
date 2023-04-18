@@ -50,7 +50,7 @@ setup(
     install_requires=[
         'requests>=2.24.0',
         'pikepdf>=3.2.0',
-        'reportlab>=3.6.8',
+        'reportlab>=3.5.67',
         'openpyxl>=3.1.2',
         'XlsxWriter>=3.0.9',
         'pdfrw>=0.4'
