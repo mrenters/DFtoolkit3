@@ -1,0 +1,92 @@
+#!/bin/env python
+#
+# Copyright 2021-2023, Martin Renters
+#
+# This file is part of DFtoolkit
+#
+# DFtoolkit is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# DFtoolkit is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
+#
+'''
+A Database Export Program to export plate, module, query and reason data
+'''
+
+import argparse
+from os import getcwd
+from dftoolkit import __version__, study_from_files
+from dftoolkit.exporter import Exporter
+from dftoolkit.rangelist import (
+    SiteList, SubjectList, PlateList, RangeListAction
+)
+
+def main():
+    '''the main routine'''
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--studydir', required=True,
+                        help='study directory')
+    parser.add_argument('--sites', default=SiteList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed sites')
+    parser.add_argument('--ids', default=SubjectList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed subjects')
+    parser.add_argument('--plates', default=PlateList(default_all=True),
+                        action=RangeListAction,
+                        help='include only listed plates')
+    parser.add_argument('--sas-libname', default='saveit',
+                        help='SAS libname')
+    parser.add_argument('--sas-libpath', default=getcwd(),
+                        help='SAS libpath')
+    parser.add_argument('--sas-datapath', default=getcwd(),
+                        help='SAS export dataset path')
+    parser.add_argument('--sas-script', default='import.sas',
+                        help='SAS import script name')
+    parser.add_argument('--pending', action='store_true',
+                        help='include pending records')
+    parser.add_argument('--missingrecords', action='store_true',
+                        help='include missing (lost) records')
+    parser.add_argument('--queries', action='store_true',
+                        help='include queries')
+    parser.add_argument('--reasons', action='store_true',
+                        help='include reasons')
+    parser.add_argument('--plate-decode', default='none',
+                        choices=['none', 'label', 'submission'],
+                        help='decode choice/check on plates')
+    parser.add_argument('--module-decode', default='label',
+                        choices=['label', 'submission'],
+                        help='decode choice/check on modules')
+    parser.add_argument('--verbose', action='count', default=0,
+                        help='enable additional debugging output')
+    parser.add_argument('--version', action='version',
+                        version='%(prog)s {vers}'.format(vers=__version__))
+
+    args = parser.parse_args()
+
+    study = study_from_files(args.studydir, args.verbose)
+    exporter = Exporter(study, {
+        'sites': args.sites,
+        'ids': args.ids,
+        'plates': args.plates,
+        'pending': args.pending,
+        'missingrecords': args.missingrecords,
+        'reasons': args.reasons,
+        'queries': args.queries
+    })
+    exporter.setup()
+    exporter.decode_output(args.plate_decode, args.module_decode)
+
+    exporter.sas_export(args.sas_script, args.sas_libname, args.sas_libpath,
+                        args.sas_datapath)
+
+if __name__ == '__main__':
+    main()
