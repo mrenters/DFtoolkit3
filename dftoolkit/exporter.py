@@ -351,7 +351,7 @@ class SAScontrol:
             if informat:
                 self.sas_control.append(f'  informat {field.name}' \
                                         f' {informat}. ;')
-                if field.data_type in ('Date', 'Time'):
+                if field.data_type in ('Date', 'Time', 'ISO8601'):
                     self.sas_control.append(f'    format {field.name}' \
                                             f' {informat}. ;')
         self.sas_control.append('  input')
