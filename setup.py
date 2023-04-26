@@ -40,6 +40,7 @@ setup(
         'scripts/closeoutPDF',
         'scripts/datachanges',
         'scripts/dataquality',
+        'scripts/exportdata',
         'scripts/make_closeout_db',
         'scripts/missingvalues',
         'scripts/updateinfo',
