@@ -27,7 +27,10 @@ import sys
 #########################################################################
 def main():
     '''Command line interface to update .info file'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Install or delete DFtoolkit reports from the '
+                    'specified .info file'
+    )
     parser.add_argument('--delete-only', action='store_true',
                         help='delete DFtoolkit reports from .info')
     parser.add_argument('--info', default='/opt/dftoolkit/reports/info',

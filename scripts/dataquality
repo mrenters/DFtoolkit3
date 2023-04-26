@@ -33,7 +33,9 @@ from dftoolkit.rangelist import (
 #####################################################################
 def main():
     '''Command line interface to data quality report'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Generate a data quality report'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--enrolled-subjects',

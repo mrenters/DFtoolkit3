@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
 #
-'''Generate a PDF file with study annotation information'''
+'''Generate the intermediate database used by the study closeout report'''
 
 import argparse
 import logging
@@ -34,8 +34,11 @@ logger = logging.getLogger(__name__)
 # MAIN
 #########################################################################
 def main():
-    '''Command line interface to study annotation'''
-    parser = argparse.ArgumentParser()
+    '''Command line interface to generate intermediate study closeout DB'''
+    parser = argparse.ArgumentParser(
+        description='This program generates the intermediate database used '
+                    'by the study closeout report'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--db', default='data.db',

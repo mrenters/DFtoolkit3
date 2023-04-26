@@ -154,8 +154,10 @@ def schema2excel(study, xlsx, plate_list):
 # MAIN
 #########################################################################
 def main():
-    '''Command line interface to study closeout'''
-    parser = argparse.ArgumentParser()
+    '''Command line interface to schema to Excel report'''
+    parser = argparse.ArgumentParser(
+        description='Generate an Excel version of the study schema'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--plates', default=PlateList(default_all=True),

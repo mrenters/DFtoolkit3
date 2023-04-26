@@ -35,7 +35,9 @@ from dftoolkit.utils import is_eval
 #########################################################################
 def main():
     '''Command line interface to study annotation'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Generate a PDF file with study annotation information'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--priority-file',

@@ -34,7 +34,9 @@ from dftoolkit.qc2excel import build_qc2excel
 #########################################################################
 def main():
     '''Command line interface to QC2Excel'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Generate Excel version(s) of the queries'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--destdir', default=os.getcwd(),

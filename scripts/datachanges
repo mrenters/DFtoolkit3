@@ -156,8 +156,11 @@ def datachanges_report(name, context):
     workbook.close()
 
 def main():
-    '''Command line interface to lasttouch'''
-    parser = argparse.ArgumentParser()
+    '''Command line interface to datachanges'''
+    parser = argparse.ArgumentParser(
+        description='This program generates a list of all fields that the '
+                    'specified users were the last to change'
+    )
     parser.add_argument('--users', required=True,
                         help='user(s) to report on (comma separated)')
     parser.add_argument('--studydir', required=True,

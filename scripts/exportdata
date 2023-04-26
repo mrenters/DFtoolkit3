@@ -31,7 +31,9 @@ from dftoolkit.rangelist import (
 
 def main():
     '''the main routine'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='A tool for exporting plate, module, query and reason data'
+    )
     parser.add_argument('--studydir', required=True,
                         help='study directory')
     parser.add_argument('--sites', default=SiteList(default_all=True),

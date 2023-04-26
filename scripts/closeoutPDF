@@ -17,7 +17,7 @@
 # You should have received a copy of the GNU General Public License
 # along with DFtoolkit.  If not, see <http://www.gnu.org/licenses/>.
 #
-'''Generate a PDF file with study annotation information'''
+'''Generate a PDF file with subject study data'''
 
 import argparse
 import logging
@@ -70,7 +70,9 @@ def worker_run(pid):
 #########################################################################
 def main():
     '''Command line interface to study closeout'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='Generate PDF files of study subject data'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--db', default='data.db',

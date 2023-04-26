@@ -233,7 +233,10 @@ def build_missings(args, study, histogram):
 
 def main():
     '''command line interface to program'''
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        description='This program generates a list of all the missing values '
+                    'in the study'
+    )
     parser.add_argument('--studydir', required=True,
                         help='study directory')
     parser.add_argument('--xlsx', default='missingvalues.xlsx',

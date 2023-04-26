@@ -104,8 +104,10 @@ def ec2excel(study, xlsx):
 # MAIN
 #########################################################################
 def main():
-    '''Command line interface to study closeout'''
-    parser = argparse.ArgumentParser()
+    '''Command line interface to edit check report'''
+    parser = argparse.ArgumentParser(
+        description='Generates a list of all edit checks in a study'
+    )
     parser.add_argument('--studydir', required=True,
                         help='sets study directory')
     parser.add_argument('--xlsx', default='eclist.xlsx',
