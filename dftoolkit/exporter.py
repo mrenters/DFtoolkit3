@@ -149,7 +149,7 @@ class Dataset:
     def sas_open(self, datapath):
         '''Open the SAS data file for writing'''
         path = path_join(datapath, self.name + '.dat')
-        self.sas_output = open(path, 'w')
+        self.sas_output = open(path, 'w', encoding='utf-8')
 
     def sas_close(self):
         '''Close the SAS data file'''
@@ -344,7 +344,7 @@ class SAScontrol:
         self.sas_control.extend([
             f'data {self.libname}.{dataset.name}(label="{dataset.description}");',
             f'  infile \'{self.datapath}/{dataset.name}.dat\'',
-            '    LRECL=16384 dlm=\'|\' missover dsd;',
+            '    ENCODING="UTF-8" LRECL=16384 dlm=\'|\' missover dsd;',
         ])
         for field in dataset.columns:
             informat = field.sas_informat
@@ -589,5 +589,5 @@ class Exporter:
             elif isinstance(dataset, ReasonDataset):
                 self.export_reasons('sas', dataset)
 
-        with open(scriptname, 'w') as output:
+        with open(scriptname, 'w', encoding='utf-8') as output:
             output.write(sas_control.control_file())
