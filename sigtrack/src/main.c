@@ -9,8 +9,8 @@
 
 ///////////////////////////////////////////////////////////////////////////////
 //
-// Copyright 2015-2022, Population Health Research Institute
-// Copyright 2015-2022, Martin Renters
+// Copyright 2015-2023, Population Health Research Institute
+// Copyright 2015-2023, Martin Renters
 //
 // This file is part of the DataFax Toolkit.
 //
@@ -29,7 +29,7 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 
-#define VERSION	"3.1.2"
+#define VERSION	"3.1.3"
 
 int yyparse(void);
 int get_config_error_cnt(void);

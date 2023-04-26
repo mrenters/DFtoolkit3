@@ -1,5 +1,5 @@
 #
-# Copyright 2020-2022, Martin Renters
+# Copyright 2020-2023, Martin Renters
 #
 # This file is part of DFtoolkit
 #
@@ -18,7 +18,7 @@
 #
 '''DFtoolkit module'''
 
-__version__ = '3.1.2'
+__version__ = '3.1.3'
 __VERSION__ = __version__
 
 import sys
