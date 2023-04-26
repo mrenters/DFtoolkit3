@@ -342,7 +342,8 @@ class SAScontrol:
         self.datasets.append(dataset)
         dataset.sas_open(self.datapath)
         self.sas_control.extend([
-            f'data {self.libname}.{dataset.name}(label="{dataset.description}");',
+            f'data {self.libname}.{dataset.name}(COMPRESS=BINARY '
+            f'label="{dataset.description}");',
             f'  infile \'{self.datapath}/{dataset.name}.dat\'',
             '    ENCODING="UTF-8" LRECL=16384 dlm=\'|\' missover dsd;',
         ])
