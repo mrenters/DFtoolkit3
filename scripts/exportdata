@@ -67,6 +67,8 @@ def main():
     parser.add_argument('--module-decode', default='label',
                         choices=['label', 'submission'],
                         help='decode choice/check on modules')
+    parser.add_argument('--unicode-check', action='store_true',
+                        help='check for Unicode in setup')
     parser.add_argument('--verbose', action='count', default=0,
                         help='enable additional debugging output')
     parser.add_argument('--version', action='version',
@@ -85,6 +87,11 @@ def main():
         'queries': args.queries
     })
     exporter.setup()
+
+    # Have we been asked to check for non-ASCII characters in the setup
+    if args.unicode_check:
+        exporter.unicode_check()
+
     exporter.decode_output(args.plate_decode, args.module_decode)
 
     exporter.sas_export(args.sas_script, args.sas_libname, args.sas_libpath,

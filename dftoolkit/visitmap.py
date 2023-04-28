@@ -133,3 +133,6 @@ class VisitMap:
             if entry.visit_type == 'C' and cycle_number in entry.visits:
                 return entry
         return None
+
+    def __iter__(self):
+        return iter(self.entries)

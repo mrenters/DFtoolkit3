@@ -44,6 +44,22 @@ def timestamp_to_iso8601(value):
 
     return datetime(year, month, day, hour, minute, second)
 
+def unicode_warning(identifier, text):
+    '''Check for non-ASCII characters and issue a warning'''
+    location = ''
+    warn = False
+    for char in text:
+        if ord(char) > 127:
+            location += '^'
+            warn = True
+        else:
+            location += ' '
+
+    if warn:
+        print('WARNING: Non-ASCII character(s) in ' + identifier)
+        print('         ' + text)
+        print('         ' + location)
+
 class FieldProperties:
     '''A class to hold FieldRef properties that need to be accessible'''
     def __init__(self):
@@ -377,6 +393,28 @@ class Exporter:
         self.include_reasons = args.get('reasons', False)
         self.include_queries = args.get('queries', False)
         self.datasets = {}
+
+    def unicode_check(self):
+        '''Check to see if there are any non-ASCII characters in setup'''
+        for visit in self.study.visit_map:
+            if visit.visit_type == 'C':
+                continue
+            unicode_warning('Visit '+str(visit.visits), visit.label)
+        for plate in self.study.plates:
+            if plate.number not in self.platelist or plate.number > 500:
+                continue
+            for moduleref in plate.modulerefs:
+                for field, value in moduleref.virtual_fields.items():
+                    if not value:
+                        continue
+                    unicode_warning(f'Plate {plate.number}:'
+                                    f'{moduleref.identifier} '
+                                    f'module property {field.name}',
+                                    value)
+            for field in plate.fields:
+                unicode_warning(f'Plate {plate.number} '
+                                f'Field {field.number} Description',
+                                field.description)
 
     def setup(self):
         '''build a list of datasets required for this export'''
