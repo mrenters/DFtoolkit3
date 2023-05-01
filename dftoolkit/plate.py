@@ -152,7 +152,7 @@ class PlatePage:
         if img:
             width, height = img.size
             width = max(864, width) # Some images are only 864
-            field_scale = width // 864
+            field_scale = width // 843  # account for A4 pages
             width = max(width, bounds.width*field_scale)
             height = max(height, bounds.height*field_scale)
         else:
