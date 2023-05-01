@@ -46,6 +46,8 @@ def timestamp_to_iso8601(value):
 
 def unicode_warning(identifier, text):
     '''Check for non-ASCII characters and issue a warning'''
+    if not text:
+        return
     location = ''
     warn = False
     for char in text:
@@ -58,7 +60,7 @@ def unicode_warning(identifier, text):
     if warn:
         print('WARNING: Non-ASCII character(s) in ' + identifier)
         print('         ' + text)
-        print('         ' + location)
+        print('         ' + location.rstrip())
 
 class FieldProperties:
     '''A class to hold FieldRef properties that need to be accessible'''
@@ -399,14 +401,12 @@ class Exporter:
         for visit in self.study.visit_map:
             if visit.visit_type == 'C':
                 continue
-            unicode_warning('Visit '+str(visit.visits), visit.label)
+            unicode_warning('visit map Visit '+str(visit.visits), visit.label)
         for plate in self.study.plates:
             if plate.number not in self.platelist or plate.number > 500:
                 continue
             for moduleref in plate.modulerefs:
                 for field, value in moduleref.virtual_fields.items():
-                    if not value:
-                        continue
                     unicode_warning(f'Plate {plate.number}:'
                                     f'{moduleref.identifier} '
                                     f'module property {field.name}',
@@ -415,6 +415,14 @@ class Exporter:
                 unicode_warning(f'Plate {plate.number} '
                                 f'Field {field.number} Description',
                                 field.description)
+                for code, label, submission in field.codes:
+                    unicode_warning(f'Plate {plate.number} '
+                                    f'Field {field.number} Code {code} label',
+                                    label)
+                    unicode_warning(f'Plate {plate.number} '
+                                    f'Field {field.number} '
+                                    f'Code {code} submission',
+                                    submission)
 
     def setup(self):
         '''build a list of datasets required for this export'''
