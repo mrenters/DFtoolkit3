@@ -11,6 +11,8 @@ The tools include:
 * dataquality - a data quality report
 * EClist - a tool for creating an Excel spreadsheet listing which fields have
   edit checks applied to them
+* exportdata - a tool for exporting data to SAS format by both plate and
+  module data. Understands DFnet module properties as "virtual variables"
 * missingvalues - a report showing location of all missing values in a study
 * QC2Excel - a tool for converting the QC database to Excel format
 * schema2excel - a tool for converting the schema to Excel format
