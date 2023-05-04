@@ -170,7 +170,7 @@ def main():
     parser.add_argument('--build', action='store_true',
                         help='build the intermediate database first')
     parser.add_argument('--xlsx', default='datachanges.xlsx',
-                        help='output Excel file (default auditdata.xlsx)')
+                        help='output Excel file (default datachanges.xlsx)')
     parser.add_argument('--sites', default=SiteList(default_all=True),
                         action=RangeListAction,
                         help='include only listed sites')
