@@ -19,6 +19,7 @@
 
 '''Sites related code'''
 
+from datetime import date
 from .rangelist import SubjectList, SiteList
 
 #############################################################################
@@ -93,6 +94,12 @@ class Site:
             if key in variable_map:
                 setattr(site, variable_map[key], value)
 
+        # Map beginning and ending dates to date types
+        if site.begin_date:
+           site.begin_date = date(*map(int, site.begin_date.split('/')))
+        if site.end_date:
+            site.begin_date = date(*map(int, site.end_date.split('/')))
+
         site.phone = fields[6]
         site.investigator = fields[7]
         site.investigator_phone = fields[8]
@@ -140,6 +147,13 @@ class Sites:
         '''Load centers database string'''
         lines = centersdb_string.splitlines()
         self._sites = [Site.from_dfcenters(line) for line in lines]
+
+    def get_site(self, site_num):
+        '''return the site data for site_num'''
+        for site in self._sites:
+            if site.number == site_num:
+                return site
+        raise IndexError(f'Request for non-existent site {site_num}')
 
     def pid_to_site_number(self, pid):
         '''Find the site number for patient'''

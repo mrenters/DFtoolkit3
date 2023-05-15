@@ -43,6 +43,7 @@ setup(
         'scripts/exportdata',
         'scripts/make_closeout_db',
         'scripts/missingvalues',
+        'scripts/recruitment',
         'scripts/updateinfo',
         'scripts/EClist',
         'scripts/QC2Excel',
