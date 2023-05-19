@@ -18,5 +18,6 @@ The tools include:
 * schema2excel - a tool for converting the schema to Excel format
 * sigtrack - A tool for tracking changes made to CRFs after an electronic
   signature has been applied.
+* recruitment - a recruitment report
 
 Additional feature development or consulting is available from teckelworks.com
