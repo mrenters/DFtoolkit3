@@ -47,6 +47,8 @@ def main():
                         help='date to end reporting on')
     parser.add_argument('--ndays', default=90, type=int,
                         help='number of days to use for statistics')
+    parser.add_argument('--target', default=0, type=int,
+                        help='total recruitment target')
     parser.add_argument('--xlsx', default='recruitment.xlsx',
                         help='output Excel filename')
     parser.add_argument('--verbose', action='count', default=0,
@@ -62,6 +64,8 @@ def main():
     recruitment = RecruitmentReport(study, {
         'enddate': args.enddate,
         'ndays': args.ndays,
+        'sites': args.sites,
+        'target': args.target
     })
     recruitment.read_events(args.events)
     recruitment.generate_xlsx(args.xlsx)
