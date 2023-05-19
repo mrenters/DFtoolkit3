@@ -24,6 +24,8 @@ from datetime import date, timedelta
 from xlsxwriter import Workbook
 from xlsxwriter.utility import xl_rowcol_to_cell
 
+from dftoolkit.rangelist import SiteList
+
 def nmonths(min_dt, max_dt):
     '''returns the number of months of date ranges'''
     return (max_dt.year - min_dt.year)*12 + \
@@ -105,10 +107,11 @@ class RecruitmentData:
         '''return patient count for the last ndays'''
         return self.count_between(end_dt - timedelta(ndays-1), end_dt)
 
-    def count_yymm(self, yymm):
+    def count_yymm(self, yymm, end_dt):
         '''Return the number of patients activated in YYMM'''
         return sum([cnt for dat, cnt in self.ptevents.items() \
-                   if yymm.year == dat.year and yymm.month == dat.month])
+                   if dat <= end_dt and \
+                      yymm.year == dat.year and yymm.month == dat.month])
 
     def mean_activation(self, end_dt):
         '''mean recruitment since activation'''
@@ -175,6 +178,8 @@ class RecruitmentReport:
         self.study = study
         self.enddate = config.get('enddate', date.today())
         self.ndays = config.get('ndays', 90)
+        self.site_list = config.get('sites', SiteList(default_all=True))
+        self.total_target = config.get('target', 0)
         self.sitedata = {
             site: RecruitmentData(site.begin_date, site.end_date) \
                 for site in study.sites if not site.is_error_monitor
@@ -187,10 +192,25 @@ class RecruitmentReport:
             for line in events.read().splitlines():
                 try:
                     command, site_str, dat = line.split('|')
-                    site = sites.get_site(int(site_str))
-                    dat = date(*map(int, dat.replace('/', '-').split('-')))
                 except (IndexError, ValueError, TypeError):
                     logging.warning('Bad events entry: %s', line)
+                    continue
+
+                try:
+                    site = sites.get_site(int(site_str))
+                except (IndexError, ValueError, TypeError):
+                    logging.warning('Bad/Unknown site number in entry: %s',
+                                    line)
+                    continue
+
+                try:
+                    dat = date(*map(int, dat.replace('/', '-').split('-')))
+                except (IndexError, ValueError, TypeError):
+                    logging.warning('Bad date (YYYY/MM/DD) in entry: %s', line)
+                    continue
+
+                # Are we filtering out this site?
+                if site.number not in self.site_list:
                     continue
 
                 sitedata = self.sitedata.get(site)
@@ -219,19 +239,24 @@ class RecruitmentReport:
             if data.activation and data.activation < start_dt:
                 start_dt = data.activation
 
-        xlsx = RecruitmentXLSX(filename, start_dt, self.enddate, self.ndays)
+        xlsx = RecruitmentXLSX(filename, start_dt, self.enddate, self.ndays,
+                               self.total_target)
         for site, data in sorted(self.sitedata.items(),
                                  key=lambda x: x[0].number):
+            if not site.number in self.site_list:
+                continue
             xlsx.add_site(site, data)
         xlsx.close_workbook()
 
 class RecruitmentXLSX:
     '''Generate an Excel recruitment report'''
-    def __init__(self, filename, min_dt, max_dt, ndays):
+    def __init__(self, filename, min_dt, max_dt, ndays, total_target):
         self.workbook = Workbook(filename)
         self.min_dt = min_dt
         self.max_dt = max_dt
         self.ndays = ndays
+        self.total_target = total_target
+        self.monthly_column_start = 0
         self.formats = {
             'header': self.workbook.add_format({
                 'bold': True,
@@ -310,8 +335,9 @@ class RecruitmentXLSX:
 
     def add_site(self, site, data):
         '''add a row with the site information'''
-        sheet = self.worksheet
         row = self.row
+        sheet = self.worksheet
+        sheet.set_row(row, 45)
         sheet.write_string(row, 0, site.country, self.formats['string'])
         sheet.write_number(row, 1, site.number, self.formats['number'])
         sheet.write_string(row, 2, site.name, self.formats['string'])
@@ -332,9 +358,11 @@ class RecruitmentXLSX:
                     self.formats['number'])
         sheet.write(row, 12, best_count/(self.ndays/30.0),
                     self.formats['float'])
-        sheet.write(row, 13, data.last_count(self.max_dt, self.ndays),
+        sheet.write(row, 13,
+                    data.last_count(self.max_dt, self.ndays)/(self.ndays/30.0),
                     self.formats['float'])
-        sheet.write(row, 14, data.first_count(self.max_dt, self.ndays),
+        sheet.write(row, 14,
+                    data.first_count(self.max_dt, self.ndays)/(self.ndays/30.0),
                     self.formats['float'])
         sheet.write(row, 15, data.mean_activation(self.max_dt),
                     self.formats['float'])
@@ -342,16 +370,21 @@ class RecruitmentXLSX:
                     self.formats['float'])
         sheet.write(row, 17, data.count_between(self.min_dt, self.max_dt),
                     self.formats['number'])
-        sheet.add_sparkline(row, 18, {'range': '{0}:{1}'.format(
-            xl_rowcol_to_cell(row, 19),
-            xl_rowcol_to_cell(row, 19 + nmonths(self.min_dt, self.max_dt)-1))})
+        sheet.write(row, 18, site.enroll, self.formats['number'])
+        sheet.write(row, 19, '=IFERROR({0}/{1}, "")'.format(
+            xl_rowcol_to_cell(row, 17),
+            xl_rowcol_to_cell(row, 18)),
+                    self.formats['percent'])
+        sheet.add_sparkline(row, 20, {'range': '{0}:{1}'.format(
+            xl_rowcol_to_cell(row, 21),
+            xl_rowcol_to_cell(row, 21 + nmonths(self.min_dt, self.max_dt)-1))})
 
-        col = 0
+        col = 21
         current = date(self.max_dt.year, self.max_dt.month, 1)
         end = self.min_dt
         while current.year > end.year or \
             (current.year == end.year and current.month >= end.month):
-            count = data.count_yymm(current)
+            count = data.count_yymm(current, self.max_dt)
             before_activation = not data.activation or \
                 current.year < data.activation.year or \
                 (current.year == data.activation.year and \
@@ -361,17 +394,17 @@ class RecruitmentXLSX:
                 (current.year == data.firstpt.year and \
                  current.month < data.firstpt.month)
             after_deactivation = data.deactivation and \
-                (current.year > data.deactivation or \
+                (current.year > data.deactivation.year or \
                 (current.year == data.deactivation.year and \
-                 current.month > site.deactivation.month))
+                 current.month > data.deactivation.month))
             if before_activation or after_deactivation:
-                sheet.write(row, 19+col, None, self.formats['darkgray'])
+                sheet.write(row, col, None, self.formats['darkgray'])
             elif before_firstpt:
-                sheet.write_string(row, 19+col, '', self.formats['gray'])
+                sheet.write_string(row, col, '', self.formats['gray'])
             elif count > 0:
-                sheet.write(row, 19+col, count, self.formats['blue'])
+                sheet.write(row, col, count, self.formats['blue'])
             else:
-                sheet.write(row, 19+col, count, self.formats['red'])
+                sheet.write(row, col, count, self.formats['red'])
 
             if current.month == 1:
                 current = current.replace(year=current.year-1, month=12)
@@ -403,11 +436,14 @@ class RecruitmentXLSX:
             ('Mean Recruit Rate\n(Activation)', 11, 'max_good, mean'),
             ('Mean Recruit Rate\n(First Subj)', 11, 'max_good, mean'),
             ('Total Subjects', 11, 'max_good, sum'),
+            ('Target', 11, 'max_good, total_target'),
+            ('% of Target', 11, 'max_good, target%'),
             ('Performance Graph\n(Most to Least Recent)', 25, 'labels')
         ]
+        self.monthly_column_start = len(columns)
         # Add in Monthly data
         for colname in month_columns(self.min_dt, self.max_dt):
-            columns.append((colname, 10, 'sum, stats'))
+            columns.append((colname, 8, 'sum, stats'))
 
         # If no data, don't add the table
         if self.row == 1:
@@ -436,42 +472,65 @@ class RecruitmentXLSX:
                             f'=SUBTOTAL(109, Data[{colname}])',
                             self.formats['number'])
             if 'stats' in coding:
+                # Cumulative total
                 sheet.write(self.row+1, colno,
+                            '=SUM({0}:{1})'.format(
+                                xl_rowcol_to_cell(self.row, colno),
+                                xl_rowcol_to_cell(self.row, len(columns))),
+                            self.formats['number'])
+                # Sites Recruiting
+                sheet.write(self.row+2, colno,
                             f'=SUBTOTAL(102, Data[{colname}])',
                             self.formats['number'])
-                sheet.write(self.row+2, colno,
+                # Sites Open
+                sheet.write(self.row+3, colno,
                             f'=SUBTOTAL(103, Data[{colname}])',
                             self.formats['number'])
-                sheet.write(self.row+3, colno,
-                            '=IFERROR({0}/{1}, 0)'.format(
-                                xl_rowcol_to_cell(self.row+1, colno),
-                                xl_rowcol_to_cell(self.row+2, colno)),
-                            self.formats['percent'])
+                # % Recruiting
                 sheet.write(self.row+4, colno,
                             '=IFERROR({0}/{1}, 0)'.format(
-                                xl_rowcol_to_cell(self.row, colno),
-                                xl_rowcol_to_cell(self.row+1, colno)),
-                            self.formats['float'])
+                                xl_rowcol_to_cell(self.row+2, colno),
+                                xl_rowcol_to_cell(self.row+3, colno)),
+                            self.formats['percent'])
+                # Rate Recruiting
                 sheet.write(self.row+5, colno,
                             '=IFERROR({0}/{1}, 0)'.format(
                                 xl_rowcol_to_cell(self.row, colno),
                                 xl_rowcol_to_cell(self.row+2, colno)),
                             self.formats['float'])
+                # Rate Open
+                sheet.write(self.row+6, colno,
+                            '=IFERROR({0}/{1}, 0)'.format(
+                                xl_rowcol_to_cell(self.row, colno),
+                                xl_rowcol_to_cell(self.row+3, colno)),
+                            self.formats['float'])
             if 'mean' in coding:
                 sheet.write(self.row, colno,
-                            f'=SUBTOTAL(101, Data[{colname}])',
+                            f'=IFERROR(SUBTOTAL(101, Data[{colname}]), "")',
                             self.formats['float'])
+            if 'total_target' in coding:
+                sheet.write(self.row, colno,
+                            self.total_target if self.total_target else None,
+                            self.formats['number'])
+            if 'target%' in coding:
+                sheet.write(self.row, colno,
+                            '=IFERROR({0}/{1}, "")'.format(
+                                xl_rowcol_to_cell(self.row, colno-2),
+                                xl_rowcol_to_cell(self.row, colno-1)),
+                            self.formats['percent'])
             if 'labels' in coding:
                 sheet.write(self.row, colno, 'Total', self.formats['header'])
-                sheet.write(self.row+1, colno, 'Sites Recruiting',
+                sheet.write(self.row+1, colno, 'Cumulative Total',
                             self.formats['header'])
-                sheet.write(self.row+2, colno, 'Sites Open',
+                sheet.write(self.row+2, colno, 'Sites Recruiting',
                             self.formats['header'])
-                sheet.write(self.row+3, colno, '%Recruiting',
+                sheet.write(self.row+3, colno, 'Sites Open',
                             self.formats['header'])
-                sheet.write(self.row+4, colno, 'Rate (recruiting)',
+                sheet.write(self.row+4, colno, '%Recruiting',
                             self.formats['header'])
-                sheet.write(self.row+5, colno, 'Rate (open)',
+                sheet.write(self.row+5, colno, 'Rate (recruiting)',
+                            self.formats['header'])
+                sheet.write(self.row+6, colno, 'Rate (open)',
                             self.formats['header'])
 
         headers = [
@@ -484,35 +543,74 @@ class RecruitmentXLSX:
 
     def add_charts(self):
         '''Add Recruitment charts'''
-        months = nmonths(self.min_dt, self.max_dt)
+        if self.row == 1:
+            return
+        monthly_start = self.monthly_column_start
+        monthly_end = monthly_start + nmonths(self.min_dt, self.max_dt) - 1
         sheet = self.workbook.add_worksheet('Charts')
         chart = self.workbook.add_chart({'type': 'column'})
         chart.add_series({
-            'categories': ['Data', 0, 19, 0, 19+months-1],
-            'values': ['Data', self.row, 19, self.row, 19+months-1],
-            'name': 'Patients'
+            'categories': ['Data', 0, monthly_start, 0, monthly_end],
+            'values': ['Data', self.row, monthly_start, self.row, monthly_end],
+            'name': 'Subjects'
         })
-        chartline = self.workbook.add_chart({'type': 'line'})
-        chartline.add_series({
-            'categories': ['Data', 0, 19, 0, 19+months-1],
-            'values': ['Data', self.row+1, 19, self.row+1, 19+months-1],
-            'name': 'Recruiting Sites'
-        })
-        chartline.add_series({
-            'values': ['Data', self.row+2, 19, self.row+2, 19+months-1],
-            'name': 'Open Sites'
-        })
-        chart.combine(chartline)
-        chart.set_title({'name': 'Site and Patient Recruitment'})
+        chart.set_title({'name': 'Subject Recruitment by Month'})
         chart.set_x_axis({'reverse': True})
         chart.set_size({
             'width': 1000,
-            'height': 750,
+            'height': 600,
             'x_offset': 20,
-            'y_offset': 20
+            'y_offset': 30
         })
         chart.set_legend({'position': 'bottom'})
         sheet.insert_chart(0, 0, chart)
+
+        chartcumlulative = self.workbook.add_chart({'type': 'column'})
+        chartcumlulative.add_series({
+            'categories': ['Data', 0, monthly_start, 0, monthly_end],
+            'values': ['Data', self.row+1, monthly_start,
+                       self.row+1, monthly_end],
+            'name': 'Cumulative Total'
+        })
+        chartcumlulative.set_title({
+            'name': 'Subject Recruitment Cumulative Total'
+        })
+        chartcumlulative.set_x_axis({'reverse': True})
+        chartcumlulative.set_size({
+            'width': 1000,
+            'height': 600,
+            'x_offset': 20,
+            'y_offset': 720
+        })
+        chartcumlulative.set_legend({'position': 'bottom'})
+        sheet.insert_chart(0, 0, chartcumlulative)
+
+        # Sites
+        chartsites = self.workbook.add_chart({'type': 'line'})
+        chartsites.add_series({
+            'values': ['Data', self.row+3, monthly_start,
+                       self.row+3, monthly_end],
+            'name': 'Open Sites',
+            'marker': {'type': 'diamond'}
+        })
+        chartsites.add_series({
+            'categories': ['Data', 0, monthly_start, 0, monthly_end],
+            'values': ['Data', self.row+2, monthly_start,
+                       self.row+2, monthly_end],
+            'name': 'Recruiting Sites',
+            'marker': {'type': 'diamond'}
+        })
+        chartsites.set_title({'name': 'Site Recruitment'})
+        chartsites.set_x_axis({'reverse': True})
+        chartsites.set_size({
+            'width': 1000,
+            'height': 600,
+            'x_offset': 20,
+            'y_offset': 1440
+        })
+        chartsites.set_legend({'position': 'bottom'})
+        sheet.insert_chart(0, 0, chartsites)
+        sheet.hide_gridlines(2)
 
     def close_workbook(self):
         '''close the workbook'''
