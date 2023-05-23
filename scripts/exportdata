@@ -24,6 +24,7 @@ A Database Export Program to export plate, module, query and reason data
 import argparse
 from os import getcwd
 from dftoolkit import __version__, study_from_files
+from dftoolkit.errors import setup_logging, print_exception
 from dftoolkit.exporter import Exporter
 from dftoolkit.rangelist import (
     SiteList, SubjectList, PlateList, RangeListAction
@@ -45,10 +46,12 @@ def main():
     parser.add_argument('--plates', default=PlateList(default_all=True),
                         action=RangeListAction,
                         help='include only listed plates')
-    parser.add_argument('--sas-libname', default='saveit',
-                        help='SAS libname')
-    parser.add_argument('--sas-libpath', default=getcwd(),
-                        help='SAS libpath')
+    parser.add_argument('--sas-libpath-plates', default=getcwd(),
+                        help='SAS libpath for plates')
+    parser.add_argument('--sas-libpath-modules', default=getcwd(),
+                        help='SAS libpath for modules')
+    parser.add_argument('--sas-libpath-metadata', default=getcwd(),
+                        help='SAS libpath for metadata')
     parser.add_argument('--sas-datapath', default=getcwd(),
                         help='SAS export dataset path')
     parser.add_argument('--sas-script', default='import.sas',
@@ -76,6 +79,8 @@ def main():
 
     args = parser.parse_args()
 
+    setup_logging(args.verbose)
+
     study = study_from_files(args.studydir, args.verbose)
     exporter = Exporter(study, {
         'sites': args.sites,
@@ -94,8 +99,17 @@ def main():
 
     exporter.decode_output(args.plate_decode, args.module_decode)
 
-    exporter.sas_export(args.sas_script, args.sas_libname, args.sas_libpath,
-                        args.sas_datapath)
+    try:
+        exporter.sas_export({
+            'script': args.sas_script,
+            'libpath_plates': args.sas_libpath_plates,
+            'libpath_modules': args.sas_libpath_modules,
+            'libpath_metadata': args.sas_libpath_metadata,
+            'datapath': args.sas_datapath
+        })
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
 
 if __name__ == '__main__':
     main()

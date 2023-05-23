@@ -23,7 +23,8 @@ A Database Export Program to export plate, module, query and reason data
 
 import re
 from datetime import datetime
-from os.path import join as path_join
+from os import makedirs
+from os.path import join as path_join, dirname as path_dirname
 from .rangelist import SiteList, SubjectList, PlateList
 
 def timestamp_to_iso8601(value):
@@ -164,6 +165,11 @@ class Dataset:
         '''return the name of the dataset'''
         return None
 
+    @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'generic'
+
     def sas_open(self, datapath):
         '''Open the SAS data file for writing'''
         path = path_join(datapath, self.name + '.dat')
@@ -220,6 +226,11 @@ class PlateDataset(Dataset):
         return 'PLATE{0:03d}'.format(self.plate.number)
 
     @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'plate'
+
+    @property
     def description(self):
         '''returns the description of the dataset'''
         return self.plate.description
@@ -251,6 +262,11 @@ class ModuleDataset(Dataset):
     def name(self):
         '''return the name of the dataset'''
         return self.module.name
+
+    @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'module'
 
     @property
     def description(self):
@@ -304,6 +320,11 @@ class QueryDataset(Dataset):
         return 'DFQUERIES'
 
     @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'metadata'
+
+    @property
     def description(self):
         '''return the description of the dataset'''
         return 'Queries'
@@ -338,6 +359,11 @@ class ReasonDataset(Dataset):
         return 'DFREASONS'
 
     @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'metadata'
+
+    @property
     def description(self):
         '''return the description of the dataset'''
         return 'Reasons'
@@ -345,10 +371,16 @@ class ReasonDataset(Dataset):
 
 class SAScontrol:
     '''A representation of a SAS control file'''
-    def __init__(self, libname, libpath, datapath):
-        self.libname = libname
-        self.datapath = datapath
-        self.sas_control = [f'libname {libname} \'{libpath}\';']
+    def __init__(self, paths):
+        self.datapath = paths.get('datapath', '.')
+        libpath_plate = paths.get('libpath_plates', '.')
+        libpath_module = paths.get('libpath_modules', '.')
+        libpath_metadata = paths.get('libpath_metadata', '.')
+        self.sas_control = [
+            f'libname plate \'{libpath_plate}\';',
+            f'libname module \'{libpath_module}\';',
+            f'libname metadata \'{libpath_metadata}\';',
+        ]
         self.datasets = []
 
     def __del__(self):
@@ -360,7 +392,7 @@ class SAScontrol:
         self.datasets.append(dataset)
         dataset.sas_open(self.datapath)
         self.sas_control.extend([
-            f'data {self.libname}.{dataset.name}(COMPRESS=BINARY '
+            f'data {dataset.dataset_type}.{dataset.name}(COMPRESS=BINARY '
             f'label="{dataset.description}");',
             f'  infile \'{self.datapath}/{dataset.name}.dat\'',
             '    ENCODING="UTF-8" LRECL=16384 dlm=\'|\' missover dsd;',
@@ -622,9 +654,14 @@ class Exporter:
             export_function = getattr(dataset, export_type + '_export')
             export_function(data_values)
 
-    def sas_export(self, scriptname, libname, libpath, datapath):
+    def sas_export(self, paths):
         '''do an export to SAS format'''
-        sas_control = SAScontrol(libname, libpath, datapath)
+        sas_control = SAScontrol(paths)
+        scriptname = paths.get('script', 'import.sas')
+        dirname = path_dirname(scriptname)
+        if dirname:
+            makedirs(dirname)
+        makedirs(paths.get('datapath', '.'), exist_ok=True)
         for dataset in sorted(self.datasets.values(), key=lambda x: x.name):
             sas_control.add_dataset(dataset)
         for dataset in self.datasets.values():
