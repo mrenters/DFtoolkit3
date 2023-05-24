@@ -22,6 +22,7 @@ A Database Export Program to export plate, module, query and reason data
 '''
 
 import argparse
+import sys
 from os import getcwd
 from dftoolkit import __version__, study_from_files
 from dftoolkit.errors import setup_logging, print_exception
