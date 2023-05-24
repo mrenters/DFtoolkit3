@@ -660,7 +660,7 @@ class Exporter:
         scriptname = paths.get('script', 'import.sas')
         dirname = path_dirname(scriptname)
         if dirname:
-            makedirs(dirname)
+            makedirs(dirname, exist_ok=True)
         makedirs(paths.get('datapath', '.'), exist_ok=True)
         for dataset in sorted(self.datasets.values(), key=lambda x: x.name):
             sas_control.add_dataset(dataset)
