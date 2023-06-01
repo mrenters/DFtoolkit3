@@ -133,7 +133,7 @@ class RecruitmentData:
 
     def best(self, end_dt, ndays):
         '''Returns count, start, end date for the best nday period'''
-        ptevents = list(filter(lambda x: x[0] < end_dt, self.ptevents.items()))
+        ptevents = list(filter(lambda x: x[0] <= end_dt, self.ptevents.items()))
         if not ptevents:
             return (0, None, None)
 
