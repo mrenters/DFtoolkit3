@@ -18,6 +18,7 @@
 #
 '''Mailmerge generation routines'''
 
+import logging
 import os
 from xlsxwriter.workbook import Workbook
 
@@ -70,6 +71,9 @@ class MailMerge:
             self.sheet.write(self.row, 5, email, self.wrap_format)
             self.sheet.write(self.row, 6, path, self.wrap_format)
             self.row += 1
+        else:
+            logging.warning('Site %d does not have email contact information',
+                            site.number)
 
     def close(self):
         '''add a table (or message) and close the workbook'''
