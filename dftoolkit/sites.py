@@ -94,11 +94,19 @@ class Site:
             if key in variable_map:
                 setattr(site, variable_map[key], value)
 
-        # Map beginning and ending dates to date types
-        if site.begin_date:
-           site.begin_date = date(*map(int, site.begin_date.split('/')))
-        if site.end_date:
-            site.begin_date = date(*map(int, site.end_date.split('/')))
+        # Map date type attributes to actual date types or None
+        for attribute in ['begin_date', 'end_date', 'protocol1_date',
+                          'protocol2_date', 'protocol3_date',
+                          'protocol4_date', 'protocol5_date']:
+            value = getattr(site, attribute)
+            if value:
+                try:
+                    value = date(*map(int, value.split('/')))
+                    setattr(site, attribute, value)
+                except (IndexError, ValueError, TypeError):
+                    setattr(site, attribute, None)
+            else:
+                setattr(site, attribute, None)
 
         site.phone = fields[6]
         site.investigator = fields[7]
