@@ -64,9 +64,9 @@ class RecruitmentDataTests(unittest.TestCase):
 
     def test_count_yymm(self):
         self.assertEqual(
-            self.data.count_yymm(date(2023, 1, 1)), 9)
+            self.data.count_yymm(date(2023, 1, 1), date(2023,2,1)), 9)
         self.assertEqual(
-            self.data.count_yymm(date(2023, 2, 1)), 0)
+            self.data.count_yymm(date(2023, 2, 1), date(2023,3,1)), 0)
         self.assertEqual(
             self.data1.count_between(date(2023, 1, 1), date(2023, 1, 5)), 0)
 
