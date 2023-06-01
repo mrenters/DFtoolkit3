@@ -22,7 +22,7 @@ A Database Export Program to export plate, module, query and reason data
 '''
 
 import re
-from datetime import datetime
+from datetime import datetime, date
 from os import makedirs
 from os.path import join as path_join, dirname as path_dirname
 from .rangelist import SiteList, SubjectList, PlateList
@@ -79,12 +79,12 @@ class FieldProperties:
 
 class DatasetColumn:
     '''The representation of a dataset column'''
-    def __init__(self, name, data_type='String', data_len=None):
+    def __init__(self, name, data_type='String', data_len=None, data_format=''):
         self.name = name
         self.decode_type = 'none'
         self.data_type = data_type
         self.is_coded = data_type in ('Choice', 'Check')
-        self.data_format = ''
+        self.data_format = data_format
         self.data_len = data_len
 
     @classmethod
@@ -132,7 +132,7 @@ class DatasetColumn:
         # If we're already a string (constant), then just return that
         if isinstance(field, str):
             return field
-        if isinstance(field, datetime):
+        if isinstance(field, (date, datetime)):
             return field.isoformat()
 
         # If we're missing, return a missing value code
@@ -368,6 +368,52 @@ class ReasonDataset(Dataset):
         '''return the description of the dataset'''
         return 'Reasons'
 
+class SitesDataset(Dataset):
+    '''A representation of a sites database'''
+    def __init__(self):
+        Dataset.__init__(self)
+        self.columns = [
+            DatasetColumn('DFSITE', 'Number'),
+            DatasetColumn('DFCOUNTRY', 'String', 100),
+            DatasetColumn('REGION', 'String', 100),
+            DatasetColumn('NAME', 'String', 100),
+            DatasetColumn('ADDRESS', 'String', 100),
+            DatasetColumn('FAX', 'String', 100),
+            DatasetColumn('CONTACT', 'String', 100),
+            DatasetColumn('PHONE', 'String', 100),
+            DatasetColumn('INVESTNM', 'String', 100),
+            DatasetColumn('INVESTPN', 'String', 100),
+            DatasetColumn('REPLYTO', 'String', 100),
+            DatasetColumn('TESTSITE', 'Number'),
+            DatasetColumn('BEGINDAT', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('ENDDAT', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('ENROLL', 'Number'),
+            DatasetColumn('PROTO1', 'String', 30),
+            DatasetColumn('PROTODT1', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('PROTO2', 'String', 30),
+            DatasetColumn('PROTODT2', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('PROTO3', 'String', 30),
+            DatasetColumn('PROTODT3', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('PROTO4', 'String', 30),
+            DatasetColumn('PROTODT4', 'Date', 10, 'YYYY/MM/DD'),
+            DatasetColumn('PROTO5', 'String', 30),
+            DatasetColumn('PROTODT5', 'Date', 10, 'YYYY/MM/DD')
+        ]
+
+    @property
+    def name(self):
+        '''return the name of the dataset'''
+        return 'DFSITES'
+
+    @property
+    def dataset_type(self):
+        '''returns the type of the dataset'''
+        return 'metadata'
+
+    @property
+    def description(self):
+        '''return the description of the dataset'''
+        return 'Sites'
 
 class SAScontrol:
     '''A representation of a SAS control file'''
@@ -501,6 +547,9 @@ class Exporter:
         if self.include_queries:
             queries = QueryDataset()
             self.datasets[queries] = queries
+
+        sites = SitesDataset()
+        self.datasets[sites] = sites
 
     def decode_output(self, plate_decode_type, module_decode_type):
         '''turn on decode check/choice fields'''
@@ -654,6 +703,41 @@ class Exporter:
             export_function = getattr(dataset, export_type + '_export')
             export_function(data_values)
 
+    def export_sites(self, export_type, dataset):
+        '''export sites'''
+        for site in self.study.sites:
+            if site.number not in self.sitelist:
+                continue
+            data_values = {
+                'DFSITE': str(site.number),
+                'DFCOUNTRY': site.country,
+                'REGION': site.region,
+                'NAME': site.name,
+                'ADDRESS': site.address,
+                'FAX': site.fax,
+                'CONTACT': site.contact,
+                'PHONE': site.contact,
+                'INVESTNM': site.investigator,
+                'INVESTPN': site.investigator_phone,
+                'REPLYTO': site.reply_address,
+                'BEGINDAT': site.begin_date,
+                'ENDDAT': site.end_date,
+                'TESTSITE': site.test_site,
+                'ENROLL': site.enroll,
+                'PROTO1': site.protocol1,
+                'PROTODT1': site.protocol1_date,
+                'PROTO2': site.protocol2,
+                'PROTODT2': site.protocol2_date,
+                'PROTO3': site.protocol3,
+                'PROTODT3': site.protocol3_date,
+                'PROTO4': site.protocol4,
+                'PROTODT4': site.protocol4_date,
+                'PROTO5': site.protocol5,
+                'PROTODT5': site.protocol5_date,
+            }
+            export_function = getattr(dataset, export_type + '_export')
+            export_function(data_values)
+
     def sas_export(self, paths):
         '''do an export to SAS format'''
         sas_control = SAScontrol(paths)
@@ -672,6 +756,8 @@ class Exporter:
                 self.export_queries('sas', dataset)
             elif isinstance(dataset, ReasonDataset):
                 self.export_reasons('sas', dataset)
+            elif isinstance(dataset, SitesDataset):
+                self.export_sites('sas', dataset)
 
         with open(scriptname, 'w', encoding='utf-8') as output:
             output.write(sas_control.control_file())
