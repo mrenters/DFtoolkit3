@@ -20,6 +20,7 @@
 '''Generate a data quality report'''
 
 import argparse
+import sys
 
 from dftoolkit import __version__, study_from_files
 from dftoolkit.errors import setup_logging, print_exception
@@ -86,9 +87,13 @@ def main():
     dataq.load_data_recs()
     dataq.load_queries()
     dataq.load_schedule()
-    dataq.generate_xlsx(args.xlsx)
-    if args.reportcards is not None and args.rules is not None:
-        dataq.generate_reportcards(args.rules, args.reportcards)
+    try:
+        dataq.generate_xlsx(args.xlsx)
+        if args.reportcards is not None and args.rules is not None:
+            dataq.generate_reportcards(args.rules, args.reportcards)
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
 
 if __name__ == '__main__':
     main()
