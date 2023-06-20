@@ -71,6 +71,9 @@ def main():
     parser.add_argument('--module-decode', default='label',
                         choices=['label', 'submission'],
                         help='decode choice/check on modules')
+    parser.add_argument('--partial-dates', default='asis',
+                        choices=['asis', 'character'],
+                        help='export partial date variables')
     parser.add_argument('--unicode-check', action='store_true',
                         help='check for Unicode in setup')
     parser.add_argument('--verbose', action='count', default=0,
@@ -90,7 +93,8 @@ def main():
         'pending': args.pending,
         'missingrecords': args.missingrecords,
         'reasons': args.reasons,
-        'queries': args.queries
+        'queries': args.queries,
+        'partialdatemode': args.partial_dates
     })
     exporter.setup()
 

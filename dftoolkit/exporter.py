@@ -68,6 +68,7 @@ class FieldProperties:
     def __init__(self):
         self.max_len = 0
         self.is_coded = False
+        self.allows_partial_date = False
 
     def set_length(self, length):
         '''set the fieldrefs maximum length'''
@@ -75,7 +76,11 @@ class FieldProperties:
 
     def set_decodable(self, codes):
         '''Track whether this field has coding associated with it'''
-        self.is_coded = self.is_coded | bool(codes)
+        self.is_coded |= bool(codes)
+
+    def set_partial_date(self, partial_date):
+        '''Check whether this data format supports partial dates'''
+        self.allows_partial_date |= partial_date
 
 class DatasetColumn:
     '''The representation of a dataset column'''
@@ -84,6 +89,7 @@ class DatasetColumn:
         self.decode_type = 'none'
         self.data_type = data_type
         self.is_coded = data_type in ('Choice', 'Check')
+        self.allows_partial_date = False
         self.data_format = data_format
         self.data_len = data_len
 
@@ -93,6 +99,7 @@ class DatasetColumn:
         entry = cls(field_name, field.data_type)
         entry.data_len = data_len
         entry.data_format = field.data_format
+        entry.allows_partial_date = field.allows_partial_date
         return entry
 
     @property
@@ -154,6 +161,12 @@ class DatasetColumn:
         if decode_type != 'none' and self.is_coded:
             self.data_type = 'String'
 
+    def set_partial_date_handling(self, partial_date_mode):
+        '''Set how to handle partial dates for this column'''
+        if self.data_type == 'Date' and self.allows_partial_date:
+            if partial_date_mode == 'character':
+                self.data_type = 'String'
+
 class Dataset:
     '''An abstract dataset representation'''
     def __init__(self):
@@ -193,6 +206,11 @@ class Dataset:
         '''Set Choice/Check fields to decoded mode'''
         for column in self.columns:
             column.set_decode_type(decode_type)
+
+    def set_partial_date_handling(self, partial_date_mode):
+        '''Set how partial dates are handled'''
+        for column in self.columns:
+            column.set_partial_date_handling(partial_date_mode)
 
 class PlateDataset(Dataset):
     '''A representation of a plate dataset, using field alias columns'''
@@ -278,6 +296,7 @@ class ModuleDataset(Dataset):
         datacol = DatasetColumn.from_field(field_name, field,
                                            properties.max_len)
         datacol.is_coded |= properties.is_coded
+        datacol.allows_partial_date |= properties.allows_partial_date
         self.columns.append(datacol)
 
 class QueryDataset(Dataset):
@@ -472,6 +491,7 @@ class Exporter:
         self.include_missing = args.get('missingrecords', False)
         self.include_reasons = args.get('reasons', False)
         self.include_queries = args.get('queries', False)
+        self.partial_date_mode = args.get('partialdatemode', 'asis')
         self.datasets = {}
 
     def unicode_check(self):
@@ -526,6 +546,7 @@ class Exporter:
                     fieldref.field, FieldProperties())
                 ref_field.set_length(fieldref.export_max_storage)
                 ref_field.set_decodable(fieldref.codes)
+                ref_field.set_partial_date(fieldref.allows_partial_date)
 
         # Build a set of modules that are used by these plates and only
         # include the fields within those modules that are referenced at
@@ -540,6 +561,9 @@ class Exporter:
             for field in filter(lambda x: x in ref_fields, module.fields):
                 module_ds.add_field(field.name, field, ref_fields.get(field))
             self.datasets[module] = module_ds
+
+        for dataset in self.datasets.values():
+            dataset.set_partial_date_handling(self.partial_date_mode)
 
         if self.include_reasons:
             reasons = ReasonDataset()

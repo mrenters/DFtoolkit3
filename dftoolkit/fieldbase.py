@@ -260,6 +260,12 @@ class FieldBase:
         ecnames.extend(parse_editchecks(self.plate_exit))
         return ecnames
 
+    @property
+    def allows_partial_date(self):
+        '''Does this field allow partial dates?'''
+        return self.data_type == 'Date' and self.data_format and \
+            ('mm' in self.data_format or 'dd' in self.data_format)
+
     ##########################################################################
     # decode
     ##########################################################################
