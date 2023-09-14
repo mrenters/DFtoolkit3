@@ -32,7 +32,7 @@ class SiteTests(unittest.TestCase):
     def setUp(self):
         self.sites = Sites()
         self.sites.load(centersdb)
-        self.sites.get_site(2).update_location('Europe', 'Germany')
+        self.sites.merge_countries('Germany|Europe|2')
 
     def test_countryregion(self):
         self.assertEqual(self.sites.get_site(1).country, 'CAN')
@@ -46,6 +46,10 @@ class SiteTests(unittest.TestCase):
         self.assertEqual(self.sites.get_site(3).country, 'Unknown')
         self.assertEqual(self.sites.get_site(3).decoded_country, 'Unknown')
         self.assertEqual(self.sites.get_site(3).region, 'Unknown')
+
+    def test_lookups(self):
+        self.assertEqual(self.sites.pid_to_site_number(1500), 1)
+        self.assertEqual(self.sites.pid_to_site_number(9999), 0)
 
 if __name__ == '__main__':
     unittest.main()
