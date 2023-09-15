@@ -481,7 +481,8 @@ class QC2ExcelWorksheet(Worksheet):
         if context.get('include_region'):
             cols.append((query.site.region, self.fmt('str', color_index)))
         if context.get('include_country'):
-            cols.append((query.site.country, self.fmt('str', color_index)))
+            cols.append((query.site.decoded_country,
+                         self.fmt('str', color_index)))
 
         cols.append((query.site.number, self.fmt('num', color_index)))
         cols.append((query.pid, self.fmt('num', color_index)))

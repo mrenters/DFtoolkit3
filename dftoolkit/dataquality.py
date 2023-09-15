@@ -57,7 +57,7 @@ def add_data_fields(data_fields, qc_types, metrics, level):
 
 def filter_rankings(rankings, country):
     '''filter a ranking list by country'''
-    return filter(lambda entry: entry[0].country == country, rankings)
+    return filter(lambda entry: entry[0].decoded_country == country, rankings)
 
 #####################################################################
 # Quality Stats - Keeps track of quality statistics
@@ -297,8 +297,8 @@ class DataQualityReport:
                          key=lambda x: (x[1].percent_complete, x[1].nrecs),
                          reverse=True)
         for rank, (site, data) in enumerate(ranking, 1):
-            country_metrics[site.country] = data + \
-                country_metrics.get(site.country, QualityStats())
+            country_metrics[site.decoded_country] = data + \
+                country_metrics.get(site.decoded_country, QualityStats())
             setattr(data, 'global_rank', rank)
 
         # Calculate ranking of site within country
@@ -351,7 +351,7 @@ class DataQualityReport:
                 'siteInvestigator': site.investigator,
                 'siteName': site.name,
                 'siteNumber': site.number,
-                'siteCountry': site.country,
+                'siteCountry': site.decoded_country,
                 'countrySiteRank': site_metrics[site].country_rank,
                 'globalCountryCount': len(country_metrics),
                 'globalSiteCount': len(site_metrics),
@@ -362,7 +362,7 @@ class DataQualityReport:
             }
             add_data_fields(data_fields, qc_types, global_metrics, 'global')
             add_data_fields(data_fields, qc_types,
-                            country_metrics[site.country], 'country')
+                            country_metrics[site.decoded_country], 'country')
             add_data_fields(data_fields, qc_types, site_metrics[site], 'site')
 
             filename = 'dataquality-{}.pdf'.format(site.number)
@@ -524,7 +524,8 @@ class DataQualityXLSX:
         '''add a row to the site sheet'''
         number_format = self.formats['number']
         string_format = self.formats['string']
-        self.site_sheet.write(self.site_row, 0, site.country, string_format)
+        self.site_sheet.write(self.site_row, 0, site.decoded_country,
+                              string_format)
         self.site_sheet.write(self.site_row, 1, site.number, number_format)
         self.site_sheet.write(self.site_row, 2, site.name, string_format)
         self.site_sheet.write(self.site_row, 3, site.investigator,
@@ -537,7 +538,7 @@ class DataQualityXLSX:
         '''add a row to the patient sheet'''
         number_format = self.formats['number']
         string_format = self.formats['string']
-        self.subject_sheet.write(self.subject_row, 0, site.country,
+        self.subject_sheet.write(self.subject_row, 0, site.decoded_country,
                                  string_format)
         self.subject_sheet.write(self.subject_row, 1, site.number,
                                  number_format)

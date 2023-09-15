@@ -64,7 +64,7 @@ class MailMerge:
         email = email.replace('  ', ' ').replace(' ', '; ')
         if email:
             self.sheet.write(self.row, 0, site.number, self.wrap_format)
-            self.sheet.write(self.row, 1, site.country, self.wrap_format)
+            self.sheet.write(self.row, 1, site.decoded_country, self.wrap_format)
             self.sheet.write(self.row, 2, site.name, self.wrap_format)
             self.sheet.write(self.row, 3, site.contact, self.wrap_format)
             self.sheet.write(self.row, 4, site.investigator, self.wrap_format)

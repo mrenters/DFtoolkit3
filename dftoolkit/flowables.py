@@ -980,7 +980,7 @@ class RankingChart(Flowable):
                 canvas.setFont('Helvetica', 10)
                 canvas.setFillColor(black)
             canvas.drawRightString(150, y_pos, str(metrics.global_rank))
-            canvas.drawString(155, y_pos, site.country)
+            canvas.drawString(155, y_pos, site.decoded_country)
             canvas.drawString(250, y_pos, site.name[0:35])
             canvas.drawRightString(500, y_pos, str(metrics.nrecs))
             canvas.drawRightString(564, y_pos, str(metrics.percent_complete))
