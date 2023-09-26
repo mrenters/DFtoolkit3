@@ -44,7 +44,7 @@ def main():
     parser.add_argument('--by-site', action='store_true',
                         help='generate a file per site')
     parser.add_argument('--mailmerge-allsites', action='store_true',
-                        help='include sites without queries in mailmerge.xlsx')
+                        help='include sites without queries in mailmerge.xlsm')
     parser.add_argument('--sites', default=SiteList(default_all=True),
                         action=RangeListAction,
                         help='include only listed sites')
