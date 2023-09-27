@@ -19,12 +19,29 @@
 '''This file implements a recruitment report'''
 
 import logging
-from collections import Counter
+import os
+from collections import Counter, namedtuple
 from datetime import date, timedelta
+from colorsys import hsv_to_rgb
+from statistics import median
+from reportlab.graphics.charts.doughnut import Doughnut
+from reportlab.graphics.charts.legends import Legend
+from reportlab.graphics.shapes import Drawing, String, Circle
+from reportlab.lib.colors import black, red, darkred, Color
+
 from xlsxwriter import Workbook
 from xlsxwriter.utility import xl_rowcol_to_cell
 
 from dftoolkit.rangelist import SiteList
+from dftoolkit.mailmerge import MailMerge
+from dftoolkit.reportcards import excel_rules, ReportCard
+
+def filter_median(items):
+    '''returns the median after removing None items from the list'''
+    items = list(filter(lambda x: x is not None, items))
+    if items:
+        return median(items)
+    return 0
 
 def nmonths(min_dt, max_dt):
     '''returns the number of months of date ranges'''
@@ -172,6 +189,11 @@ class RecruitmentData:
 
         return (best_count, best_start_dat, best_end_dat)
 
+    def __repr__(self):
+        '''Printable version'''
+        return 'activation={} first={}, last={}, count={}'.format(
+            self.activation, self.firstpt, self.lastpt, self.total_pts)
+
 class RecruitmentReport:
     '''A recruitment report'''
     def __init__(self, study, config):
@@ -247,6 +269,78 @@ class RecruitmentReport:
                 continue
             xlsx.add_site(site, data)
         xlsx.close_workbook()
+
+    def make_datafields(self, site, data, sitedata):
+        '''Make a dictionary of data field values for reportcards'''
+        total_pts = sum(data.total_pts for _, data in sitedata)
+        last_count = data.last_count(self.enddate, self.ndays)
+        best_count, _, _ = data.best(self.enddate, self.ndays)
+        country_sitedata = list(
+            filter(lambda x: x[0].country == site.country, sitedata))
+        return {
+            'nDayPeriod': self.ndays,
+            'today': date.today().isoformat(),
+            'globalSiteCount': len(sitedata),
+            'globalSubjectCount': total_pts,
+            'globalCountryCount': len({site.country for site, _ in sitedata}),
+            'globalTargetCount': self.total_target,
+            'globalTargetPercent': 0 if not self.total_target else \
+                                   round(100*total_pts/self.total_target, 1),
+            'globalMedianFirstSubjectDays': filter_median([
+                days(data.activation, data.firstpt) for _, data in sitedata]),
+            'globalMedianLastSubjectDays': filter_median([
+                days(data.lastpt, self.enddate) for _, data in sitedata]),
+            'globalMedianLastPeriodCount': median([
+                data.last_count(self.enddate, self.ndays) \
+                for _, data in sitedata]),
+            'globalMedianLastPeriodRate': median([
+                round(data.last_count(self.enddate, self.ndays) / \
+                     (self.ndays/30.0), 1) for _, data in sitedata]),
+            '_globalRanking': sitedata,
+            '_countryRanking': country_sitedata,
+            '_mysite': site,
+            'countrySiteCount': len(country_sitedata),
+            'countrySubjectCount': sum(
+                cdata.total_pts for _, cdata in country_sitedata),
+            'siteContact': site.contact,
+            'siteInvestigator': site.investigator,
+            'siteName': site.name,
+            'siteNumber': site.number,
+            'siteCountry': site.decoded_country,
+            'siteActivationDate': data.activation,
+            'siteActivationDays': data.days_active(self.enddate),
+            'siteFirstSubjectDate': data.firstpt,
+            'siteFirstSubjectDays': data.days_firstpt(self.enddate),
+            'siteLastSubjectDate': data.lastpt,
+            'siteLastSubjectDays': days(data.lastpt, self.enddate) or 0,
+            'siteLastPeriodCount': last_count,
+            'siteLastRecruitRate': round(last_count / (self.ndays/30.0), 1),
+            'siteBestPeriodCount': best_count,
+            'siteBestRecruitRate': round(best_count / (self.ndays/30.0), 1),
+            'siteMeanRecruitRate': data.mean_firstpt(self.enddate),
+            'siteSubjectCount': data.total_pts
+        }
+
+    def generate_reportcards(self, rules_file, reportdir):
+        '''generate PDF report cards'''
+        os.makedirs(reportdir, exist_ok=True)
+        rules = excel_rules(rules_file)
+        sitedata = sorted(
+            filter(lambda x: x[0].number in self.site_list and x[1].activation,
+                   self.sitedata.items()),
+            key=lambda x: x[1].total_pts,
+            reverse=True)
+        mailmerge = MailMerge(os.path.join(reportdir,
+                                           'recruitment-mailmerge.xlsm'))
+        for site, data in sorted(sitedata, key=lambda x: x[0].number):
+            data_fields = self.make_datafields(site, data, sitedata)
+            filename = 'recruitment-{}.pdf'.format(site.number)
+            reportcard = RecruitmentReportCard(
+                os.path.join(reportdir, filename))
+            if reportcard.build(rules, data_fields):
+                mailmerge.add_row(site, filename)
+
+        mailmerge.close()
 
 class RecruitmentXLSX:
     '''Generate an Excel recruitment report'''
@@ -338,7 +432,7 @@ class RecruitmentXLSX:
         row = self.row
         sheet = self.worksheet
         sheet.set_row(row, 45)
-        sheet.write_string(row, 0, site.country, self.formats['string'])
+        sheet.write_string(row, 0, site.decoded_country, self.formats['string'])
         sheet.write_number(row, 1, site.number, self.formats['number'])
         sheet.write_string(row, 2, site.name, self.formats['string'])
         sheet.write_string(row, 3, site.investigator,
@@ -617,3 +711,129 @@ class RecruitmentXLSX:
         self.add_table()
         self.add_charts()
         self.workbook.close()
+
+ChartData = namedtuple('ChartData', ['isme', 'name', 'total'])
+
+class DonutChart(Drawing):
+    '''A recruitment donut chart'''
+    def __init__(self, dataset, width=564, height=140):
+        Drawing.__init__(self, width, height)
+        self.width = width
+        self.height = height
+        nmax = 24
+
+        if not dataset:
+            self.add(String(width/2, height/2, 'No Data', textAnchor='middle',
+                            fontName='Helvetica', fontSize=16))
+            return
+
+        # Sort so current site is at the front of the list, then by number
+        dataset = sorted(dataset, key=lambda x: (x.isme, x.total), reverse=True)
+
+        # If we have more than nmax entries, coalesce tail into 'other' category
+        if len(dataset) > nmax:
+            others = ChartData(False,
+                               '... {0} Others ...'.format(len(dataset)-nmax+1),
+                               sum([item.total for item in dataset[nmax-1:]]))
+            dataset = dataset[:nmax-1]
+            dataset.append(others)
+
+        # Now sort by totals
+        dataset.sort(key=lambda x: x.total, reverse=True)
+
+
+        total = sum([item.total for item in dataset])
+        selected = [item.isme for item in dataset].index(True)
+        total_to_slice = sum([item.total for item in dataset[:selected]])
+
+        donut = Doughnut()
+        donut.labels = [item.name for item in dataset]
+        donut.data = [item.total for item in dataset]
+        donut.width = 120
+        donut.height = donut.width
+        donut.x = 5
+        donut.y = 15
+        donut.simpleLabels = False
+        donut.slices.label_visible = False
+        donut.slices.fontColor = None
+        donut.slices.strokeColor = black
+        donut.slices.popout = 2
+
+        delta = 1.0 / (len(dataset)-1 if len(dataset) > 5 else 5)
+        for item, _ in enumerate(dataset):
+            donut.slices[item].fillColor = Color(
+                *hsv_to_rgb(0.67, 1.0-(item*delta), 0.5+((item*delta)*0.5)))
+
+        donut.slices[selected].popout = 15
+        donut.slices[selected].strokeColor = darkred
+        donut.slices[selected].fillColor = red
+        donut.slices[selected].strokeWidth = 1
+        donut.startAngle = (
+            (total_to_slice/total)*360 + \
+            (dataset[selected].total/total)*180) if total else 0
+
+        legend = Legend()
+        legend.x = 160
+        legend.y = 15 + donut.height/2
+        legend.dx = 8
+        legend.dy = 8
+        legend.fontName = 'Helvetica'
+        legend.fontSize = 7
+        legend.boxAnchor = 'w'
+        legend.columnMaximum = nmax/2
+        legend.strokeWidth = 1
+        legend.strokeColor = black
+        legend.deltax = 1 #75
+        legend.deltay = 10
+        legend.autoXPadding = 10
+        legend.yGap = 0
+        legend.dxTextSpace = 5
+        legend.alignment = 'right'
+        legend.dividerLines = 1|2|4
+        legend.dividerOffsY = 4.5
+        legend.subCols.rpad = 0
+        legend.subCols[0].minWidth = 120
+        legend.subCols[1].minWidth = 30
+        legend.subCols[2].minWidth = 30
+        legend.colorNamePairs = [
+            (donut.slices[item].fillColor,
+             (data.name[:32], '%d' % data.total,
+              '%0.1f%%' % ((100*data.total/total) if total else 0.0))
+            ) for item, data in enumerate(dataset)]
+
+        # If we have no data, add an empty circle instead of donut
+        if total:
+            self.add(donut)
+        else:
+            self.add(Circle(donut.x + donut.width/2, donut.y + donut.height/2,
+                            donut.width/2, fillColor=None))
+            self.add(String(donut.x + donut.width/2, donut.y + donut.height/2,
+                            'No Data', textAnchor='middle',
+                            fontName='Helvetica', fontSize=12))
+        self.add(legend)
+
+    def wrap(self, availWidth, availHeight):
+        return (availWidth, self.height)
+
+class RecruitmentReportCard(ReportCard):
+    '''A PDF recruitment report card'''
+    def __init__(self, filename):
+        super().__init__(filename)
+        self.handlers['chart'] = self.chart_handler
+
+    def chart_handler(self, _operation, text, data_fields):
+        '''Add a chart'''
+        options = text.replace(',', ' ').split()
+        mysite = data_fields.get('_mysite')
+
+        if 'global' in options:
+            dataset = data_fields.get('_globalRanking', [])
+        elif 'country' in options:
+            dataset = data_fields.get('_countryRanking', [])
+        else:
+            raise ValueError(f'unknown chart type "{text}"')
+
+        dataset = [ChartData(mysite == site, site.name, data.total_pts) \
+                   for site, data in dataset]
+
+        self.flowables.append(DonutChart(dataset))

@@ -20,6 +20,7 @@
 '''Generate a recruitment report'''
 
 import argparse
+import sys
 from datetime import datetime, date
 
 from dftoolkit import __version__, study_from_files
@@ -51,6 +52,10 @@ def main():
                         help='total recruitment target')
     parser.add_argument('--xlsx', default='recruitment.xlsx',
                         help='output Excel filename')
+    parser.add_argument('--reportcards',
+                        help='output directory for report cards')
+    parser.add_argument('--rules',
+                        help='report card rules file')
     parser.add_argument('--verbose', action='count', default=0,
                         help='enable additional debugging information')
     parser.add_argument('--version', action='version',
@@ -68,7 +73,13 @@ def main():
         'target': args.target
     })
     recruitment.read_events(args.events)
-    recruitment.generate_xlsx(args.xlsx)
+    try:
+        recruitment.generate_xlsx(args.xlsx)
+        if args.reportcards is not None and args.rules is not None:
+            recruitment.generate_reportcards(args.rules, args.reportcards)
+    except Exception:
+        print_exception(args.verbose)
+        sys.exit(2)
 
 if __name__ == '__main__':
     main()
