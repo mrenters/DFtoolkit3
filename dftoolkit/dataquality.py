@@ -340,7 +340,8 @@ class DataQualityReport:
         global_metrics = sum(country_metrics.values(), QualityStats())
 
         os.makedirs(reportdir, exist_ok=True)
-        mailmerge = MailMerge(os.path.join(reportdir, 'mailmerge.xlsm'))
+        mailmerge = MailMerge(os.path.join(reportdir,
+                                           'dataquality-mailmerge.xlsm'))
 
         qc_types = self.study.qc_types.sorted_types(
             self.config.get('merge_mpqc', False))
