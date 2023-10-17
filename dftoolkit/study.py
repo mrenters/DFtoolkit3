@@ -61,7 +61,7 @@ class Study:
         self.snap = True
         self.start_year = 1990
         self.unique_field_names = False
-        self.var_guies = True
+        self.var_guides = True
         self.variables_color = '#0064ff'
         self.viewmode_ec = False
         self.year_cutoff = 1920
@@ -224,7 +224,7 @@ class Study:
         self.snap = study.get('snap', True)
         self.start_year = study.get('startYear')
         self.unique_field_names = study.get('uniqueFieldNames', False)
-        self.var_guies = study.get('varGuides', True)
+        self.var_guides = study.get('varGuides', True)
         self.variables_color = study.get('variablesColor', '#0064ff')
         self.viewmode_ec = study.get('viewModeEc', False)
         self.year_cutoff = study.get('yearCutoff', 1920)
