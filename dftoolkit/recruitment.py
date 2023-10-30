@@ -317,7 +317,7 @@ class RecruitmentReport:
             'siteLastRecruitRate': round(last_count / (self.ndays/30.0), 1),
             'siteBestPeriodCount': best_count,
             'siteBestRecruitRate': round(best_count / (self.ndays/30.0), 1),
-            'siteMeanRecruitRate': data.mean_firstpt(self.enddate),
+            'siteMeanRecruitRate': round(data.mean_firstpt(self.enddate), 1),
             'siteSubjectCount': data.total_pts
         }
 
