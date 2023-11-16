@@ -137,8 +137,8 @@ class Rect:
         if width == 0 or height == 0:
             return (1, 0, 0)
 
-        scale_x = float(self.width)/width
-        scale_y = float(self.height)/height
+        scale_x = float(self.width)/abs(width)
+        scale_y = float(self.height)/abs(height)
         scale = scale_x if scale_x <= scale_y else scale_y
 
         translate_x = self.left + (self.width-(width*scale))/2

@@ -94,6 +94,12 @@ class AttachedDoc(Flowable):
             width, height = self.obj.size
         else:
             width, height = self.obj.BBox[2], self.obj.BBox[3]
+            # If we have a transformation matrix, adjust based on it
+            if self.obj.Matrix:
+                matrix = self.obj.Matrix
+                width, height = width*matrix[0] + height*matrix[2] + matrix[4],\
+                    width*matrix[1] + height*matrix[3] + matrix[5]
+
 
         scale, translate_x, translate_y = attachment_box.fit(width, height)
 
