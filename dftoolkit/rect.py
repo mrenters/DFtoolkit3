@@ -57,6 +57,10 @@ class Rect:
         self.right = right
         self.bottom = bottom
 
+    def __eq__(self, other):
+        return self.left == other.left and self.top == other.top and \
+            self.right == other.right and self.bottom == other.bottom
+
     def __add__(self, rect):
         return Rect(min(self.left, rect.left),
                     min(self.top, rect.top),
@@ -145,6 +149,10 @@ class Rect:
         translate_y = self.top
 
         return (scale, translate_x, translate_y)
+
+    def __str__(self):
+        return '(x=%d, y=%d, w=%d, h=%d)' % \
+            (self.left, self.bottom, self.width, self.height)
 
     def __repr__(self):
         return '<Rect (%d,%d,%d,%d [%d,%d])>' % \
