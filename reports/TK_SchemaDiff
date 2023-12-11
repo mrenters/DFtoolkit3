@@ -44,7 +44,7 @@ fi
 echo "Processing schema differences from $ORIGIN to $TARGET..."
 
 OUTFILE="$STUDY_DIR/work/schemachanges-`basename $ORIGIN .json`-to-`basename $TARGET .json`.xlsx"
-schemadiff --original $STUDY_DIR/dfschema/$ORIGIN \
-           --current $STUDY_DIR/dfschema/$TARGET \
+schemadiff --origin $STUDY_DIR/dfschema/$ORIGIN \
+           --target $STUDY_DIR/dfschema/$TARGET \
            --xlsx $OUTFILE
 echo "Output file is: $OUTFILE"
