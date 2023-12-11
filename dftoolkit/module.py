@@ -21,6 +21,7 @@
 
 from requests.structures import CaseInsensitiveDict
 from .fieldbase import Field, FieldRef
+from .changerecord import ChangeList, ChangeTest, ChangeRecord
 
 ##############################################################################
 # Module Class
@@ -78,6 +79,34 @@ class Module:
             if field.name == name:
                 return field
         return None
+
+    def changes(self, prev):
+        '''return a list of changes between prev and current defn'''
+        changelist = ChangeList()
+        for attrib, test in [
+                ('description', ChangeTest('Description')),
+                ('name', ChangeTest('Name')),
+        ]:
+            changelist.evaluate_attr(prev, self, attrib, test)
+
+        changelist.evaluate_user_properties(prev, self)
+
+        field_dict = {field.unique_id: field for field in self.fields}
+        for field in prev.fields:
+            if field.unique_id not in field_dict:
+                changelist.append(ChangeRecord(
+                    field, 'Field Deleted', impact_level=10,
+                    impact_text='Data loss possible'))
+
+        field_dict = {field.unique_id: field for field in prev.fields}
+        for field in self.fields:
+            if field.unique_id not in field_dict:
+                changelist.append(ChangeRecord(field, 'Field Added'))
+            else:
+                changelist.extend(
+                    field.changes(field_dict.get(field.unique_id)))
+
+        return changelist
 
     def __repr__(self):
         return '<Module %d (%s)>' % (self.unique_id, self.name)
@@ -154,6 +183,19 @@ class ModuleRef:
                 field_values[field] = value
 
         return field_values
+
+    def changes(self, prev):
+        '''return a list of changes between prev and current defn'''
+        changelist = ChangeList()
+        for attrib, test in [
+                ('description', ChangeTest('Description')),
+                ('instance', ChangeTest('Module Instance')),
+                ('name', ChangeTest('Name')),
+        ]:
+            changelist.evaluate_attr(prev, self, attrib, test)
+
+        changelist.evaluate_user_properties(prev, self)
+        return changelist
 
     def __repr__(self):
         return '<ModuleRef %d (%s)>' % (self.unique_id, self.identifier)
