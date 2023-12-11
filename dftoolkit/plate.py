@@ -24,6 +24,7 @@ from reportlab.lib.units import inch
 from .module import ModuleRef
 from .ecrf import ECRFLabel, ECRFScreen, ECRFShading
 from .rect import Rect
+from .changerecord import ChangeList, ChangeTest, ChangeRecord
 
 class ScreenBreak:
     '''A screen break on an eCRF'''
@@ -306,3 +307,51 @@ class Plate:
         # Add page boundaries
         for page in self.pages:
             page.set_pagesize((pagesize[0]/scale[0], pagesize[1]/scale[1]))
+
+    def changes(self, prev):
+        '''Return a list of changes betweeen prev and current definition'''
+        changelist = ChangeList()
+        for attrib, test in [
+                ('arrival_trigger', ChangeTest('Arrival Trigger')),
+                ('description', ChangeTest('Description')),
+                ('eligible_for_signing', ChangeTest('Eligible for Signing')),
+                ('help_text', ChangeTest('Help')),
+                ('sequence_coded', ChangeTest('Sequence Coded')),
+                ('term_plate', ChangeTest('Termination Plate')),
+        ]:
+            changelist.evaluate_attr(prev, self, attrib, test)
+
+        changelist.evaluate_user_properties(prev, self)
+
+        # Check ModuleRefs
+        # pylint: disable=protected-access
+        for key, value in prev._module_refs.items():
+            if key not in self._module_refs:
+                changelist.append(ChangeRecord(
+                    prev, 'Module Deleted', value.identifier))
+        for key, value in self._module_refs.items():
+            if key not in prev._module_refs:
+                changelist.append(ChangeRecord(
+                    self, 'Module Added', value.identifier))
+            else:
+                changelist.extend(
+                    value.changes(prev._module_refs.get(key)))
+
+
+        # Check changes to fields
+        field_dict = {field.unique_id: field for field in self.user_fields}
+        for field in prev.user_fields:
+            if field.unique_id not in field_dict:
+                changelist.append(ChangeRecord(
+                    field, 'Field Deleted', impact_level=10,
+                    impact_text='Data loss possible'))
+
+        field_dict = {field.unique_id: field for field in prev.user_fields}
+        for field in self.user_fields:
+            if field.unique_id not in field_dict:
+                changelist.append(ChangeRecord(field, 'Field Added'))
+            else:
+                changelist.extend(
+                    field.changes(field_dict.get(field.unique_id)))
+
+        return changelist
