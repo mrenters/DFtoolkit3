@@ -47,4 +47,10 @@ OUTFILE="$STUDY_DIR/work/schemachanges-`basename $ORIGIN .json`-to-`basename $TA
 schemadiff --origin $STUDY_DIR/dfschema/$ORIGIN \
            --target $STUDY_DIR/dfschema/$TARGET \
            --xlsx $OUTFILE
-echo "Output file is: $OUTFILE"
+if [ $? -eq 0 ]
+then
+    echo "Output file is $OUTFILE"
+else
+    echo "Report terminated with errors."
+    exit 2
+fi
