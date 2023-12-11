@@ -1,0 +1,50 @@
+#!/bin/sh
+##########################################################################
+# Compare Two DFschema files and report major differences
+##########################################################################
+source /opt/dftoolkit/bin/activate
+if [ $# -lt 1 ]
+then
+        echo "No study Specified"
+        exit 2;
+fi
+
+STUDY_DIR=`/opt/dfdiscover/bin/DFgetparam.rpc -s $1 STUDY_DIR`
+if [ -z "$STUDY_DIR" ]
+then
+        echo "Unable to determine STUDY_DIR"
+        exit 2
+fi
+
+if [ $# -lt 3 ]
+then
+        echo "Required Parameters:"
+        echo "old-schema new-schema"
+        echo ""
+        echo "Available Schema Files"
+        echo ""
+        ls $STUDY_DIR/dfschema | grep ".json$"
+        exit;
+fi
+
+ORIGIN=`basename $2`
+TARGET=`basename $3`
+if [ ! -f "$STUDY_DIR/dfschema/$ORIGIN" ]
+then
+        echo "Source schema file $ORIGIN does not exist."
+        exit 2
+fi
+
+if [ ! -f "$STUDY_DIR/dfschema/$TARGET" ]
+then
+        echo "Target schema file $TARGET does not exist."
+        exit 2
+fi
+
+echo "Processing schema differences from $ORIGIN to $TARGET..."
+
+OUTFILE="$STUDY_DIR/work/schemachanges-`basename $ORIGIN .json`-to-`basename $TARGET .json`.xlsx"
+schemadiff --original $STUDY_DIR/dfschema/$ORIGIN \
+           --current $STUDY_DIR/dfschema/$TARGET \
+           --xlsx $OUTFILE
+echo "Output file is: $OUTFILE"
