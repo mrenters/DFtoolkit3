@@ -226,9 +226,9 @@ class FieldBase:
         self.reason_nonblank = json.get('reasonIfNonBlank', False)
         self.blinded = json.get('blinded') != 'No'
         self.required = json.get('required')
-        self.store = json.get('store')
+        self.store = json.get('store', 1)
         self.display = json.get('display', self.store)
-        self.use = json.get('use')
+        self.use = json.get('use', 'Standard')
         self.mapping = json.get('mapping')
         self.year_cutoff = json.get('yearCutoff')
         self.date_rounding = json.get('dateRounding')
@@ -394,10 +394,10 @@ class FieldBase:
 
         # Check coding
         for box in range(max(len(prev.codes), len(self.codes))):
-            if box > len(prev.codes):
+            if box >= len(prev.codes):
                 changelist.append(ChangeRecord(
                     self, f'Code box {box} added', None, self.codes[box]))
-            elif box > len(self.codes):
+            elif box >= len(self.codes):
                 changelist.append(ChangeRecord(
                     self, f'Code box {box} deleted', prev.codes[box], None,
                     impact_level=10,
