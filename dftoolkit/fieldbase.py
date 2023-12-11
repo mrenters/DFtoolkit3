@@ -19,7 +19,9 @@
 
 '''FieldBase abstract class used by Styles, Fields and FieldRefs'''
 
+from operator import lt, gt
 from requests.structures import CaseInsensitiveDict
+from .changerecord import ChangeList, ChangeTest, ChangeRecord
 from .rect import Rect, rect_groups
 from .ecrf import layout_text, ECRFLabel
 from .texttools import bold_font
@@ -163,6 +165,7 @@ class FieldBase:
         self.data_format = None
         self.help_text = None
         self.constant = None
+        self.constant_value = ''
         self.prompt = None
         self.comment = None
         self.units = None
@@ -174,8 +177,6 @@ class FieldBase:
         self.skip_condition = None
         self.inherited = None
         self.locked = None
-        self.left_value = None
-        self.right_value = None
         self.reason_level = None
         self.reason_nonblank = False
         self.blinded = False
@@ -209,6 +210,7 @@ class FieldBase:
         self.data_format = json.get('format')
         self.help_text = json.get('help')
         self.constant = json.get('constant')
+        self.constant_value = json.get('constantValue', '')
         self.prompt = json.get('prompt')
         self.comment = json.get('comment')
         self.units = json.get('units')
@@ -235,7 +237,7 @@ class FieldBase:
         self.codes = []
         for code in json.get('codes', []):
             self.codes.append((code['number'], code['label'],
-                               code.get('subLabel')))
+                               code.get('subLabel', '')))
 
         for userprop in json.get('userProperties', []):
             alias = self._study.user_property_tags.get(userprop.get('name'))
@@ -309,6 +311,106 @@ class FieldBase:
             if submission:
                 max_len = max(max_len, len(submission))
         return max_len
+
+    ##########################################################################
+    # Changes - build a list of changes between two versions
+    ##########################################################################
+    def changes(self, prev):
+        '''build a list of differences between the previous and current defn'''
+        changelist = ChangeList()
+        for attrib, test in [
+                ('number',
+                 ChangeTest('Number', impact_level=10,
+                            impact_text='Review Edit Checks')),
+                ('name',
+                 ChangeTest('Name', impact_level=10,
+                            impact_text='Review Edit Checks and SAS')),
+                ('alias',
+                 ChangeTest('Alias', impact_level=10,
+                            impact_text='Review Edit Checks and SAS')),
+                ('style_name',
+                 ChangeTest('Style Name', impact_level=10,
+                            impact_text='Potential meaning change')),
+                ('description', ChangeTest('Description')),
+                ('data_type',
+                 ChangeTest('Data Type', impact_level=10,
+                            impact_text='Potential data loss, review EC/SAS')),
+                ('legal_range',
+                 ChangeTest('Legal Range', impact_level=5,
+                            impact_text='Potential meaning change')),
+                ('data_format',
+                 ChangeTest('Format', impact_level=10,
+                            impact_text='Potential data loss, review EC/SAS')),
+                ('help_text', ChangeTest('Help Text')),
+                ('constant',
+                 ChangeTest('Constant Field', impact_level=5,
+                            impact_text='Potential data loss/meaning change')),
+                ('constant_value',
+                 ChangeTest('Constant Value', impact_level=5,
+                            impact_text='Potential data loss/meaning change')),
+                ('prompt',
+                 ChangeTest('Prompt', impact_level=5,
+                            impact_text='Potential meaning change')),
+                ('comment', ChangeTest('Comment')),
+                ('units',
+                 ChangeTest('Units', impact_level=5,
+                            impact_text='Potential meaning change')),
+                ('plate_enter', ChangeTest('Plate Enter Edit Checks')),
+                ('field_enter', ChangeTest('Field Enter Edit Checks')),
+                ('field_exit', ChangeTest('Field Exit Edit Checks')),
+                ('plate_exit', ChangeTest('Plate Exit Edit Checks')),
+                ('skip_number', ChangeTest('Skip Number')),
+                ('skip_condition', ChangeTest('Skip Condition')),
+                ('vas_left_value',
+                 ChangeTest('Left Value', impact_level=5,
+                            impact_text='Potential meaning change')),
+                ('vas_right_value',
+                 ChangeTest('Right Value', impact_level=5,
+                            impact_text='Potential meaning change')),
+                ('reason_level', ChangeTest('Reason Level')),
+                ('reason_nonblank', ChangeTest('Reason Non-Blank')),
+                ('blinded', ChangeTest('Hidden')),
+                ('required', ChangeTest('Need')),
+                ('store',
+                 ChangeTest('Store Length', compare_op=gt, impact_level=10,
+                            impact_text='Potential data loss')),
+                ('store', ChangeTest('Store Length', compare_op=lt)),
+                ('display', ChangeTest('Display Length')),
+                ('use', ChangeTest('Use')),
+                ('mapping',
+                 ChangeTest(
+                     'Mapping', impact_level=10,
+                     impact_text='Potential data change, review EC/SAS')),
+                ('year_cutoff',
+                 ChangeTest(
+                     'Year Cutoff', impact_level=10,
+                     impact_text='Potential data change, review EC/SAS')),
+                ('date_rounding',
+                 ChangeTest(
+                     'Date Rounding', impact_level=10,
+                     impact_text='Potential data change, review EC/SAS')),
+        ]:
+            changelist.evaluate_attr(prev, self, attrib, test)
+
+        # Check coding
+        for box in range(max(len(prev.codes), len(self.codes))):
+            if box > len(prev.codes):
+                changelist.append(ChangeRecord(
+                    self, f'Code box {box} added', None, self.codes[box]))
+            elif box > len(self.codes):
+                changelist.append(ChangeRecord(
+                    self, f'Code box {box} deleted', prev.codes[box], None,
+                    impact_level=10,
+                    impact_text='May invalidate data. Review EC/SAS'))
+            elif prev.codes[box] != self.codes[box]:
+                changelist.append(ChangeRecord(
+                    self, f'Code box {box} changed',
+                    prev.codes[box], self.codes[box],
+                    impact_level=10,
+                    impact_text='May invalidate data. Review EC/SAS'))
+
+        changelist.evaluate_user_properties(prev, self)
+        return changelist
 
 ##############################################################################
 # Style Class
@@ -560,3 +662,32 @@ class FieldRef(FieldBase):
             element.translate(x_offset, y_offset)
         for rect in self.rects:
             rect.translate(x_offset, y_offset)
+
+    def changes(self, prev):
+        '''Return a list of changes between two versions of a FieldRef'''
+        changelist = super().changes(prev)
+        changelist.evaluate_attr(
+            prev, self, 'expanded_alias',
+            ChangeTest('Alias (Expanded Name)', impact_level=10,
+                       impact_text='Review Edit Checks and SAS'))
+        # Check boxes
+        for box in range(max(len(prev.rects), len(self.rects))):
+            if box >= len(prev.rects):
+                changelist.append(ChangeRecord(
+                    self, f'Field Box {box} added', None, self.rects[box],
+                    impact_level=5,
+                    impact_text='Review all backgrounds to ensure they match'))
+            elif box >= len(self.rects):
+                changelist.append(ChangeRecord(
+                    self, f'Field Box {box} deleted', prev.rects[box], None,
+                    impact_level=5,
+                    impact_text='Review all backgrounds to ensure they match'))
+            elif prev.rects[box] != self.rects[box]:
+                changelist.append(ChangeRecord(
+                    self, f'Field Box {box} changed',
+                    prev.rects[box], self.rects[box],
+                    impact_level=5,
+                    impact_text='Review all backgrounds to ensure they match'))
+
+        changelist.sort(key=lambda x: x.description)
+        return changelist
