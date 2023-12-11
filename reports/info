@@ -164,7 +164,7 @@
 <html>
 <head><title>TK_Schema2Excel</title></head>
 <body bgcolor="white" text="black" link="blue">
-<h1>TK_EClist</h1>
+<h1>TK_Schema2Excel</h1>
 <p>
     This report generates an Excel file containing a list of plates and
     fields properties in the study.
@@ -175,4 +175,29 @@
 </body>
 </html>
 .END
+
+.BEGIN TK_SchemaDiff
+.TITLE Schema Differencer
+<!DOCTYPE html
+    PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head><title>TK_SchemaDiff</title></head>
+<body bgcolor="white" text="black" link="blue">
+<h1>TK_SchemaDiff</h1>
+<p>
+    This report generates an Excel file containing a list of the differences
+    between two setup files.
+</p>
+<p>
+    When run without any parameters, it will display a list of all setup
+    file versions available. To get a list of changes between them, pick
+    two of those files as arguments to the report.
+</p>
+<p>
+    The resulting Excel file is placed in $STUDYDIR/work/schemachanges-OLD-to-NEW.xlsx
+</p>
+</body>
+</html>
+.END
+
 .ENDGROUP DFtoolkit
