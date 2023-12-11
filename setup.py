@@ -50,6 +50,7 @@ setup(
         'scripts/EClist',
         'scripts/QC2Excel',
         'scripts/schema2excel',
+        'scripts/schemadiff',
     ],
     install_requires=[
         'requests>=2.24.0',
