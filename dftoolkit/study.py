@@ -32,6 +32,7 @@ from .metadata import  QCStatusMap, QCTypeMap, Query, Reason
 from .record import Record
 from .sites import Sites
 from .rangelist import PlateList, SubjectList
+from .changerecord import ChangeList, ChangeTest, ChangeRecord
 
 class Study:
     '''Study representation class'''
@@ -46,7 +47,7 @@ class Study:
         self.creator = None
         self.crf_guides = True
         self.date_rounding = None
-        self.description = None
+        self.description_len = None
         self.file_version = None
         self.fill_color = '#ffffff'
         self.foreground_color = '#ffff00'
@@ -209,7 +210,7 @@ class Study:
         self.creator = study.get('creator')
         self.crf_guides = study.get('crfGuides', True)
         self.date_rounding = study.get('dateRounding', 'Never')
-        self.description = study.get('description')
+        self.description_len = study.get('descriptionLen')
         self.file_version = study.get('fileVersion')
         self.fill_color = study.get('fillColor', '#ffffff')
         self.foreground_color = study.get('foregroundColor', '#ffff00')
@@ -392,6 +393,9 @@ class Study:
         '''get the study name, either from the config file, or the setup'''
         return self._config.get('STUDY_NAME', self.setup_name)
 
+    def __repr__(self):
+        return '<Study %d - %s>' % (self.number, self.study_name)
+
     ########################################################################
     # Load Study Setup information
     ########################################################################
@@ -474,3 +478,87 @@ class Study:
                 field.priority = priority
             except ValueError:
                 pass
+
+    ########################################################################
+    # changes
+    ########################################################################
+    def changes(self, prev):
+        '''build a list of differences between two setups'''
+        changelist = ChangeList()
+        for attrib, test in [
+                ('create_version', ChangeTest('Creation Version')),
+                ('created', ChangeTest('Creation Date')),
+                ('creator', ChangeTest('Creator')),
+                ('date_rounding',
+                 ChangeTest('Date Rounding', impact_level=10,
+                            impact_text='Potential Meaning Change')),
+                ('description_len', ChangeTest('Description Length')),
+                ('file_version', ChangeTest('File Version')),
+                ('modify_version', ChangeTest('Modifing Software Version')),
+                ('multiple_qcs', ChangeTest('Multiple QCs Enabled')),
+                ('number', ChangeTest('Study Number')),
+                ('setup_version', ChangeTest('Study Setup Version')),
+                ('start_year',
+                 ChangeTest('Study Start Year', impact_level=10,
+                            impact_text='Potential Meaning Change')),
+                ('unique_field_names', ChangeTest('Unique Field Names')),
+                ('viewmode_ec', ChangeTest('Execute Edit Checks in View Mode')),
+                ('year_cutoff',
+                 ChangeTest('Two Digit Year Cutoff', impact_level=10,
+                            impact_text='Potential Meaning Change')),
+        ]:
+            changelist.evaluate_attr(prev, self, attrib, test)
+
+        changelist.evaluate_user_properties(prev, self)
+
+        # Check changes to level labels
+        for key in self.levels:
+            changelist.evaluate_values(self, prev.levels.get(key),
+                                       self.levels.get(key),
+                                       ChangeTest(f'Level {key} label'))
+
+        # Check Styles
+        # pylint: disable=protected-access
+        for key, value in prev._styles.items():
+            if key not in self._styles:
+                changelist.append(ChangeRecord(
+                    value, 'Style Deleted',
+                    None, None, impact_level=5,
+                    impact_text='Potential meaning change'))
+        for key, value in self._styles.items():
+            if key not in prev._styles:
+                changelist.append(ChangeRecord(
+                    value, 'Style Added', None, None))
+            else:
+                changelist.extend(value.changes(prev._styles.get(key)))
+
+        # Check Modules
+        for key, value in prev._modules.items():
+            if key not in self._modules:
+                changelist.append(ChangeRecord(
+                    value, 'Module Deleted',
+                    None, None, impact_level=5,
+                    impact_text='Potential loss of data'))
+        for key, value in self._modules.items():
+            if key not in prev._modules:
+                changelist.append(ChangeRecord(
+                    value, 'Module Added', None, None))
+            else:
+                changelist.extend(value.changes(prev._modules.get(key)))
+
+        # Check Plates
+        for key, value in prev._plates.items():
+            if key not in self._plates:
+                changelist.append(ChangeRecord(
+                    value, 'Plate Deleted',
+                    None, None, impact_level=10,
+                    impact_text='Potential loss of data'))
+        for key, value in self._plates.items():
+            if key not in prev._plates:
+                changelist.append(ChangeRecord(
+                    value, 'Plate Added', None, None,
+                    impact_text='Review exports'))
+            else:
+                changelist.extend(value.changes(prev._plates.get(key)))
+
+        return changelist
