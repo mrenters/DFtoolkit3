@@ -16,6 +16,7 @@ The tools include:
 * missingvalues - a report showing location of all missing values in a study
 * QC2Excel - a tool for converting the QC database to Excel format
 * schema2excel - a tool for converting the schema to Excel format
+* schemadiff - a tool for comparing two setup files and reporting on differences
 * sigtrack - A tool for tracking changes made to CRFs after an electronic
   signature has been applied.
 * recruitment - a recruitment report
