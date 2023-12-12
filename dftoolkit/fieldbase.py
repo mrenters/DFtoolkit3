@@ -690,5 +690,4 @@ class FieldRef(FieldBase):
                     impact_level=5,
                     impact_text='Review all backgrounds to ensure they match'))
 
-        changelist.sort(key=lambda x: x.description)
         return changelist
