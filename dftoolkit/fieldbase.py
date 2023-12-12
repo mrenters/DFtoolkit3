@@ -319,9 +319,6 @@ class FieldBase:
         '''build a list of differences between the previous and current defn'''
         changelist = ChangeList()
         for attrib, test in [
-                ('number',
-                 ChangeTest('Number', impact_level=10,
-                            impact_text='Review Edit Checks')),
                 ('name',
                  ChangeTest('Name', impact_level=10,
                             impact_text='Review Edit Checks and SAS')),
@@ -666,6 +663,10 @@ class FieldRef(FieldBase):
     def changes(self, prev):
         '''Return a list of changes between two versions of a FieldRef'''
         changelist = super().changes(prev)
+        changelist.evaluate_attr(
+            prev, self, 'number',
+            ChangeTest('Field Number', impact_level=10,
+                       impact_text='Review Edit Checks'))
         changelist.evaluate_attr(
             prev, self, 'expanded_alias',
             ChangeTest('Alias (Expanded Name)', impact_level=10,
