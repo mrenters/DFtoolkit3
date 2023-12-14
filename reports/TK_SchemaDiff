@@ -27,11 +27,11 @@ then
         exit;
 fi
 
-ORIGIN=`basename $2`
+SOURCE=`basename $2`
 TARGET=`basename $3`
-if [ ! -f "$STUDY_DIR/dfschema/$ORIGIN" ]
+if [ ! -f "$STUDY_DIR/dfschema/$SOURCE" ]
 then
-        echo "Source schema file $ORIGIN does not exist."
+        echo "Source schema file $SOURCE does not exist."
         exit 2
 fi
 
@@ -41,10 +41,10 @@ then
         exit 2
 fi
 
-echo "Processing schema differences from $ORIGIN to $TARGET..."
+echo "Processing schema differences from $SOURCE to $TARGET..."
 
-OUTFILE="$STUDY_DIR/work/schemachanges-`basename $ORIGIN .json`-to-`basename $TARGET .json`.xlsx"
-schemadiff --origin $STUDY_DIR/dfschema/$ORIGIN \
+OUTFILE="$STUDY_DIR/work/schemachanges-`basename $SOURCE .json`-to-`basename $TARGET .json`.xlsx"
+schemadiff --source $STUDY_DIR/dfschema/$SOURCE \
            --target $STUDY_DIR/dfschema/$TARGET \
            --xlsx $OUTFILE
 if [ $? -eq 0 ]
