@@ -191,10 +191,13 @@
 <p>
     When run without any parameters, it will display a list of all setup
     file versions available. To get a list of changes between them, pick
-    two of those files as arguments to the report.
+    two of those files (the SOURCE and TARGET files) as arguments to the report.
 </p>
 <p>
-    The resulting Excel file is placed in $STUDYDIR/work/schemachanges-OLD-to-NEW.xlsx
+    The resulting Excel file is placed in $STUDYDIR/work/schemachanges-SOURCE-to-TARGET.xlsx
+</p>
+where SOURCE and TARGET are the names of selected file versions.
+<p>
 </p>
 </body>
 </html>
