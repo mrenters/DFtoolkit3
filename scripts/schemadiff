@@ -34,9 +34,9 @@ def main():
     parser = argparse.ArgumentParser(
         description='Generate an Excel of study changes'
     )
-    parser.add_argument('--origin', required=True,
+    parser.add_argument('--source', required=True,
                         type=argparse.FileType('r'),
-                        help='origin schema file')
+                        help='source schema file')
     parser.add_argument('--target', required=True,
                         type=argparse.FileType('r'),
                         help='target schema file')
@@ -51,11 +51,11 @@ def main():
     setup_logging(args.verbose)
 
     try:
-        origin = Study(None)
-        origin.load_setup(args.origin.read())
+        source = Study(None)
+        source.load_setup(args.source.read())
         target = Study(None)
         target.load_setup(args.target.read())
-        changes = target.changes(origin)
+        changes = target.changes(source)
         xlsx = SchemaDiffXLSX(args.xlsx)
         xlsx.generate(changes)
 
