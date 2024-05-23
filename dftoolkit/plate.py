@@ -332,7 +332,7 @@ class Plate:
         for key, value in self._module_refs.items():
             if key not in prev._module_refs:
                 changelist.append(ChangeRecord(
-                    self, 'Module Added', value.identifier))
+                    self, 'Module Added', None, value.identifier))
             else:
                 changelist.extend(
                     value.changes(prev._module_refs.get(key)))
