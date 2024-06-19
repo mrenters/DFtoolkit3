@@ -119,7 +119,7 @@ order by a.tdate, a.ttime
 def parse_key_change(reason):
     '''Parse a Key changed from [n,n,n] to [n,n,n]: why string and return the
        new keys'''
-    keys = re.findall('[[0-9]+,[0-9]+,[0-9]+]', reason)
+    keys = re.findall(r'\[\d+,\d+,\d+]', reason)
     if len(keys) < 2:
         return None, None, None
     try:
