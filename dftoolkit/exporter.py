@@ -63,6 +63,14 @@ def unicode_warning(identifier, text):
         print('         ' + text)
         print('         ' + location.rstrip())
 
+def sas_label_quote(text):
+    '''Change single quotes to double single quotes for SAS label strings'''
+    return text.replace("'", "''").replace('\n', ' ')
+
+def sas_data_cleanup(text):
+    '''Replace \n with a space and | with \\| in data strings'''
+    return text.replace('\n', ' ').replace('|', '\\|')
+
 class FieldProperties:
     '''A class to hold FieldRef properties that need to be accessible'''
     def __init__(self):
@@ -84,22 +92,26 @@ class FieldProperties:
 
 class DatasetColumn:
     '''The representation of a dataset column'''
-    def __init__(self, name, data_type='String', data_len=None, data_format=''):
+    def __init__(self, name, attrib):
         self.name = name
         self.decode_type = 'none'
-        self.data_type = data_type
-        self.is_coded = data_type in ('Choice', 'Check')
-        self.allows_partial_date = False
-        self.data_format = data_format
-        self.data_len = data_len
+        self.data_type = attrib.get('data_type', 'String')
+        self.is_coded = self.data_type in ('Choice', 'Check')
+        self.allows_partial_date = attrib.get('allows_partial_date', False)
+        self.data_format = attrib.get('data_format', '')
+        self.data_len = attrib.get('data_len')
+        self.description = attrib.get('description')
 
     @classmethod
     def from_field(cls, field_name, field, data_len):
         '''Generate a DatasetColumn from setup Field data'''
-        entry = cls(field_name, field.data_type)
-        entry.data_len = data_len
-        entry.data_format = field.data_format
-        entry.allows_partial_date = field.allows_partial_date
+        entry = cls(field_name, {
+            'data_type': field.data_type,
+            'data_len': data_len,
+            'data_format': field.data_format,
+            'allows_partial_date': field.allows_partial_date,
+            'description': field.description
+        })
         return entry
 
     @property
@@ -138,7 +150,7 @@ class DatasetColumn:
         '''Return the string value to be exported for this field'''
         # If we're already a string (constant), then just return that
         if isinstance(field, str):
-            return field
+            return sas_data_cleanup(field)
         if isinstance(field, (date, datetime)):
             return field.isoformat()
 
@@ -153,7 +165,8 @@ class DatasetColumn:
                 value = field.label
             elif self.decode_type == 'submission':
                 value = field.submission
-        return value
+
+        return sas_data_cleanup(value)
 
     def set_decode_type(self, decode_type):
         '''Set column to decoded mode'''
@@ -224,14 +237,15 @@ class PlateDataset(Dataset):
             DatasetColumn.from_field('DFVALID', fields[1],
                                      fields[1].export_max_storage),
             DatasetColumn.from_field('DFRASTER', fields[2], 12),
-            DatasetColumn('DFCREATE', 'ISO8601'),
-            DatasetColumn('DFMODIFY', 'ISO8601'),
-            DatasetColumn('DFCOUNTRY', 'String', 100),
-            DatasetColumn('DFSITE', 'Number'),
-            DatasetColumn('SUBJID', 'Number'),
-            DatasetColumn('VISIT', 'Number'),
-            DatasetColumn('VISITNAM', 'String', 100),
-            DatasetColumn('PLATE', 'Number')
+            DatasetColumn('DFCREATE', {'data_type': 'ISO8601'}),
+            DatasetColumn('DFMODIFY', {'data_type': 'ISO8601'}),
+            DatasetColumn('DFCOUNTRY',
+                          {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('DFSITE', {'data_type': 'Number'}),
+            DatasetColumn('SUBJID', {'data_type': 'Number'}),
+            DatasetColumn('VISIT', {'data_type': 'Number'}),
+            DatasetColumn('VISITNAM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('PLATE', {'data_type': 'Number'})
         ]
         self.columns.extend(
             [DatasetColumn.from_field(field.expanded_alias, field,
@@ -265,15 +279,16 @@ class ModuleDataset(Dataset):
                                      status.export_max_storage),
             DatasetColumn.from_field('DFVALID', valid,
                                      valid.export_max_storage),
-            DatasetColumn('DFCREATE', 'ISO8601'),
-            DatasetColumn('DFMODIFY', 'ISO8601'),
-            DatasetColumn('DFCOUNTRY', 'String', 100),
-            DatasetColumn('DFSITE', 'Number'),
-            DatasetColumn('SUBJID', 'Number'),
-            DatasetColumn('VISIT', 'Number'),
-            DatasetColumn('VISITNAM', 'String', 100),
-            DatasetColumn('PLATE', 'Number'),
-            DatasetColumn('MODULEID', 'Number')
+            DatasetColumn('DFCREATE', {'data_type': 'ISO8601'}),
+            DatasetColumn('DFMODIFY', {'data_type': 'ISO8601'}),
+            DatasetColumn('DFCOUNTRY',
+                          {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('DFSITE', {'data_type': 'Number'}),
+            DatasetColumn('SUBJID', {'data_type': 'Number'}),
+            DatasetColumn('VISIT', {'data_type': 'Number'}),
+            DatasetColumn('VISITNAM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('PLATE', {'data_type': 'Number'}),
+            DatasetColumn('MODULEID', {'data_type': 'Number'})
         ]
 
     @property
@@ -304,33 +319,34 @@ class QueryDataset(Dataset):
     def __init__(self):
         Dataset.__init__(self)
         self.columns = [
-            DatasetColumn('DFSTATUS', 'String', 30),
-            DatasetColumn('DFSTCODE', 'Number'),
-            DatasetColumn('DFVALID', 'Number'),
-            DatasetColumn('DFCOUNTRY', 'String', 100),
-            DatasetColumn('DFSITE', 'Number'),
-            DatasetColumn('SUBJID', 'Number'),
-            DatasetColumn('VISIT', 'Number'),
-            DatasetColumn('VISITNAM', 'String', 100),
-            DatasetColumn('PLATE', 'Number'),
-            DatasetColumn('FIELD', 'Number'),
-            DatasetColumn('ALIAS', 'String', 32),
-            DatasetColumn('DESC', 'String', 64),
-            DatasetColumn('REPORT', 'Number'),
-            DatasetColumn('PAGE', 'Number'),
-            DatasetColumn('PROBLEM', 'String', 100),
-            DatasetColumn('REFAX', 'String', 8),
-            DatasetColumn('USAGE', 'String', 16),
-            DatasetColumn('VALUE', 'String', 150),
-            DatasetColumn('QUERY', 'String', 500),
-            DatasetColumn('REPLY', 'String', 500),
-            DatasetColumn('NOTE', 'String', 500),
-            DatasetColumn('CREATOR', 'String', 32),
-            DatasetColumn('CREATED', 'ISO8601'),
-            DatasetColumn('MODIFIER', 'String', 32),
-            DatasetColumn('MODIFIED', 'ISO8601'),
-            DatasetColumn('RESOLVER', 'String', 32),
-            DatasetColumn('RESOLVED', 'ISO8601')
+            DatasetColumn('DFSTATUS', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('DFSTCODE', {'data_type': 'Number'}),
+            DatasetColumn('DFVALID', {'data_type': 'Number'}),
+            DatasetColumn('DFCOUNTRY',
+                          {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('DFSITE', {'data_type': 'Number'}),
+            DatasetColumn('SUBJID', {'data_type': 'Number'}),
+            DatasetColumn('VISIT', {'data_type': 'Number'}),
+            DatasetColumn('VISITNAM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('PLATE', {'data_type': 'Number'}),
+            DatasetColumn('FIELD', {'data_type': 'Number'}),
+            DatasetColumn('ALIAS', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('DESC', {'data_type': 'String', 'data_len': 64}),
+            DatasetColumn('REPORT', {'data_type': 'Number'}),
+            DatasetColumn('PAGE', {'data_type': 'Number'}),
+            DatasetColumn('PROBLEM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('REFAX', {'data_type': 'String', 'data_len': 8}),
+            DatasetColumn('USAGE', {'data_type': 'String', 'data_len': 16}),
+            DatasetColumn('VALUE', {'data_type': 'String', 'data_len': 150}),
+            DatasetColumn('QUERY', {'data_type': 'String', 'data_len': 500}),
+            DatasetColumn('REPLY', {'data_type': 'String', 'data_len': 500}),
+            DatasetColumn('NOTE', {'data_type': 'String', 'data_len': 500}),
+            DatasetColumn('CREATOR', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('CREATED', {'data_type': 'ISO8601'}),
+            DatasetColumn('MODIFIER', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('MODIFIED', {'data_type': 'ISO8601'}),
+            DatasetColumn('RESOLVER', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('RESOLVED', {'data_type': 'ISO8601'})
         ]
 
     @property
@@ -353,23 +369,24 @@ class ReasonDataset(Dataset):
     def __init__(self):
         Dataset.__init__(self)
         self.columns = [
-            DatasetColumn('DFSTATUS', 'String', 30),
-            DatasetColumn('DFVALID', 'Number'),
-            DatasetColumn('DFCOUNTRY', 'String', 100),
-            DatasetColumn('DFSITE', 'Number'),
-            DatasetColumn('SUBJID', 'Number'),
-            DatasetColumn('VISIT', 'Number'),
-            DatasetColumn('VISITNAM', 'String', 100),
-            DatasetColumn('PLATE', 'Number'),
-            DatasetColumn('FIELD', 'Number'),
-            DatasetColumn('ALIAS', 'String', 32),
-            DatasetColumn('DESC', 'String', 64),
-            DatasetColumn('RSNCODE', 'String', 64),
-            DatasetColumn('RSNTEXT', 'String', 500),
-            DatasetColumn('CREATOR', 'String', 32),
-            DatasetColumn('CREATED', 'ISO8601'),
-            DatasetColumn('MODIFIER', 'String', 32),
-            DatasetColumn('MODIFIED', 'ISO8601')
+            DatasetColumn('DFSTATUS', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('DFVALID', {'data_type': 'Number'}),
+            DatasetColumn('DFCOUNTRY',
+                          {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('DFSITE', {'data_type': 'Number'}),
+            DatasetColumn('SUBJID', {'data_type': 'Number'}),
+            DatasetColumn('VISIT', {'data_type': 'Number'}),
+            DatasetColumn('VISITNAM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('PLATE', {'data_type': 'Number'}),
+            DatasetColumn('FIELD', {'data_type': 'Number'}),
+            DatasetColumn('ALIAS', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('DESC', {'data_type': 'String', 'data_len': 64}),
+            DatasetColumn('RSNCODE', {'data_type': 'String', 'data_len': 64}),
+            DatasetColumn('RSNTEXT', {'data_type': 'String', 'data_len': 500}),
+            DatasetColumn('CREATOR', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('CREATED', {'data_type': 'ISO8601'}),
+            DatasetColumn('MODIFIER', {'data_type': 'String', 'data_len': 32}),
+            DatasetColumn('MODIFIED', {'data_type': 'ISO8601'})
         ]
 
     @property
@@ -392,31 +409,60 @@ class SitesDataset(Dataset):
     def __init__(self):
         Dataset.__init__(self)
         self.columns = [
-            DatasetColumn('DFSITE', 'Number'),
-            DatasetColumn('DFCOUNTRY', 'String', 100),
-            DatasetColumn('REGION', 'String', 100),
-            DatasetColumn('NAME', 'String', 100),
-            DatasetColumn('ADDRESS', 'String', 100),
-            DatasetColumn('FAX', 'String', 100),
-            DatasetColumn('CONTACT', 'String', 100),
-            DatasetColumn('PHONE', 'String', 100),
-            DatasetColumn('INVESTNM', 'String', 100),
-            DatasetColumn('INVESTPN', 'String', 100),
-            DatasetColumn('REPLYTO', 'String', 100),
-            DatasetColumn('TESTSITE', 'Number'),
-            DatasetColumn('BEGINDAT', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('ENDDAT', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('ENROLL', 'Number'),
-            DatasetColumn('PROTO1', 'String', 30),
-            DatasetColumn('PROTODT1', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('PROTO2', 'String', 30),
-            DatasetColumn('PROTODT2', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('PROTO3', 'String', 30),
-            DatasetColumn('PROTODT3', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('PROTO4', 'String', 30),
-            DatasetColumn('PROTODT4', 'Date', 10, 'YYYY/MM/DD'),
-            DatasetColumn('PROTO5', 'String', 30),
-            DatasetColumn('PROTODT5', 'Date', 10, 'YYYY/MM/DD')
+            DatasetColumn('DFSITE', {'data_type': 'Number'}),
+            DatasetColumn('DFCOUNTRY',
+                          {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('REGION', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('NAME', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('ADDRESS', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('FAX', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('CONTACT', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('PHONE', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('INVESTNM', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('INVESTPN', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('REPLYTO', {'data_type': 'String', 'data_len': 100}),
+            DatasetColumn('TESTSITE', {'data_type': 'Number'}),
+            DatasetColumn('BEGINDAT', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('ENDDAT', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('ENROLL', {'data_type': 'Number'}),
+            DatasetColumn('PROTO1', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('PROTODT1', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('PROTO2', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('PROTODT2', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('PROTO3', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('PROTODT3', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('PROTO4', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('PROTODT4', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
+            DatasetColumn('PROTO5', {'data_type': 'String', 'data_len': 30}),
+            DatasetColumn('PROTODT5', {
+                'data_type': 'Date',
+                'data_len': 10,
+                'data_format': 'YYYY/MM/DD'
+            }),
         ]
 
     @property
@@ -474,7 +520,16 @@ class SAScontrol:
         for field in dataset.columns:
             self.sas_control.append(f'    {field.sas_input_name}')
 
-        self.sas_control.append(';\n')
+        self.sas_control.append('  ;')
+
+        labels = [f'     {col.name} = \'{sas_label_quote(col.description)}\'' \
+                  for col in dataset.columns if col.description]
+        if labels:
+            self.sas_control.append('  label')
+            self.sas_control.extend(labels)
+            self.sas_control.append(';\n')
+
+        self.sas_control.append('\n')
 
     def control_file(self):
         '''returns the control file data'''
@@ -587,6 +642,14 @@ class Exporter:
         '''export a plate including its modules'''
         modulerefs = plate_dataset.plate.modulerefs
 
+        # Evaluate virtual fields
+        # Virtual fields can be a string, or =expn (TODO)
+        virtual_fields = {moduleref:{} for moduleref in modulerefs}
+        for moduleref in modulerefs:
+            for field, value in moduleref.virtual_fields.items():
+                if value:
+                    virtual_fields[moduleref][field.name] = value
+
         # Process each record for that plate
         for record in self.study.data(plate_dataset.plate, self.idlist,
                                       missing_records=self.include_missing):
@@ -628,10 +691,10 @@ class Exporter:
             }
 
             # Add in virtual fields
-            for moduleref in modulerefs:
-                for field, value in moduleref.virtual_fields.items():
+            for moduleref, fields in virtual_fields.items():
+                for name, value in fields.items():
                     if value:
-                        moduleref_datavalues[moduleref][field.name] = value
+                        moduleref_datavalues[moduleref][name] = value
 
             # Add in field values from data record
             for fieldvalue in field_values:
