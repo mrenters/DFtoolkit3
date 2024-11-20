@@ -803,7 +803,7 @@ class Exporter:
                 'ADDRESS': site.address,
                 'FAX': site.fax,
                 'CONTACT': site.contact,
-                'PHONE': site.contact,
+                'PHONE': site.phone,
                 'INVESTNM': site.investigator,
                 'INVESTPN': site.investigator_phone,
                 'REPLYTO': site.reply_address,
