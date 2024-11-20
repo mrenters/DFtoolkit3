@@ -37,7 +37,7 @@ colnames = [
     ('Alias', 12),
     ('Type', 8),
     ('Style', 15),
-    ('Visit Date', 15),
+    ('Use', 15),
     ('Description', 24),
     ('Legal Range', 32),
     ('Help', 32),
