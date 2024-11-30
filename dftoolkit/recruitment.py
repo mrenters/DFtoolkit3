@@ -823,6 +823,7 @@ class RecruitmentReportCard(ReportCard):
 
     def chart_handler(self, _operation, text, data_fields):
         '''Add a chart'''
+        self.flush_statements()
         options = text.replace(',', ' ').split()
         mysite = data_fields.get('_mysite')
 

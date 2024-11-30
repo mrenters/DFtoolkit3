@@ -741,6 +741,7 @@ class DataQualityReportCard(ReportCard):
 
     def chart_handler(self, _operation, text, data_fields):
         '''Add a chart'''
+        self.flush_statements()
         options = text.replace(',', ' ').split()
         grade = 'nograde' not in options
 
