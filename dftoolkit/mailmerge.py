@@ -1,5 +1,5 @@
 #
-# Copyright 2022, Martin Renters
+# Copyright 2022-2025, Martin Renters
 #
 # This file is part of DFtoolkit
 #

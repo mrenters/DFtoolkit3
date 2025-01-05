@@ -1,6 +1,6 @@
 # vim:ts=4:sw=4:et:ai:sts=4
 #
-# Copyright 2020-2022, Martin Renters
+# Copyright 2020-2025, Martin Renters
 #
 # This file is part of DFtoolkit
 #
