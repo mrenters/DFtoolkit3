@@ -14,10 +14,13 @@ lex.yy.c:	lex.l grammar.tab.h
 grammar.tab.h grammar.tab.c:	grammar.y
 	bison --defines grammar.y
 
-.c.o:	$(HDRS)
+$(OBJS): $(HDRS)
+
+.c.o:
 	gcc $(CFLAGS) -c $<
 
 .PHONY:	clean
 
 clean:
 	rm -f $(OBJS) $(PROG) lex.yy.c grammar.tab.c grammar.tab.h
+
