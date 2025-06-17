@@ -34,9 +34,9 @@
 int yyparse(void);
 int get_config_error_cnt(void);
 
-eSigConfig *esig_config_head = 0;
+eSigConfig *esc_config_head = 0;
 
-FILE *yyin;
+extern FILE *yyin;
 
 /////////////////////////////////////////////////////////////////////////////
 // PROCESS_INPUT - Process Audit trail input

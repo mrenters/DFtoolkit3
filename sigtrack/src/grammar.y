@@ -32,6 +32,8 @@
 int yylex (void);
 int yyerror(char *s);
 
+extern eSigConfig *     esc_config_head;
+
 %}
 
 %union {

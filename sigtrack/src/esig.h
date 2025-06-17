@@ -107,8 +107,6 @@ typedef struct esigconf {
 	int		serial;
 } eSigConfig;
 
-eSigConfig *	esc_config_head;
-
 eSigConfig *	esc_alloc();
 void		esc_free(eSigConfig *e);
 void		esc_print(eSigConfig *e);
