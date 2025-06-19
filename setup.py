@@ -19,7 +19,7 @@ def pkg_data(name):
 setup(
     name='dftoolkit',
     version=__version__,
-    description='DFdiscover/DataFax Library for Python',
+    description='DFdiscover Library for Python',
     url='http://www.teckelworks.com',
     author='Martin Renters',
     author_email='martin@teckelworks.com',
