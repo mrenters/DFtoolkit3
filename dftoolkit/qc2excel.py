@@ -352,7 +352,7 @@ class QC2ExcelWorksheet(Worksheet):
                          'Total', self.fmt('header'))
         row += 1
         self.write_formula(row, sitecol+1,
-                           '=SUBTOTAL(3, {sht}_Details[[Site]])'.format(
+                           '=SUBTOTAL(103, {sht}_Details[[Site]])'.format(
                                sht=self.get_name()), self.fmt('num'))
         total_cell = xl_rowcol_to_cell(row, sitecol+1)
         self.write(row, sitecol+2, 'Selected Records', self.fmt('category'))
