@@ -191,8 +191,8 @@ class RecruitmentData:
 
     def __repr__(self):
         '''Printable version'''
-        return 'activation={} first={}, last={}, count={}'.format(
-            self.activation, self.firstpt, self.lastpt, self.total_pts)
+        return f'activation={self.activation} first={self.firstpt}, ' \
+                f'last={self.lastpt}, count={self.total_pts}'
 
 class RecruitmentReport:
     '''A recruitment report'''
@@ -334,7 +334,7 @@ class RecruitmentReport:
                                            'recruitment-mailmerge.xlsm'))
         for site, data in sorted(sitedata, key=lambda x: x[0].number):
             data_fields = self.make_datafields(site, data, sitedata)
-            filename = 'recruitment-{}.pdf'.format(site.number)
+            filename = f'recruitment-{site.number}.pdf'
             reportcard = RecruitmentReportCard(
                 os.path.join(reportdir, filename))
             if reportcard.build(rules, data_fields):

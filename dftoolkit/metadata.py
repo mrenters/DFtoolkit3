@@ -167,7 +167,7 @@ class QCStatus:
         self.is_resolved = is_resolved
 
     def __repr__(self):
-        return '<QCStatus %s, %s>' % (self.label, self.is_resolved)
+        return f'<QCStatus {self.label}, {self.is_resolved}>'
 
 class QCStatusMap(dict):
     '''QC Status Map'''
@@ -218,8 +218,7 @@ class QCType:
         self.sortorder = sortorder
 
     def __repr__(self):
-        return '<QCType %s, %s, %d>' % (self.label, self.autoresolve,
-                                        self.sortorder)
+        return f'<QCType {self.label}, {self.autoresolve}, {self.sortorder}>'
 
 class QCTypeMap(dict):
     '''The QC Type Map'''

@@ -79,8 +79,8 @@ def build_attachment_image(record, attachment):
                      localtime(attachment.timestamp))
     try:
         img = Image.open(io.BytesIO(attachment.data))
-        label = 'Attached Document {}, ({}, Single Image), ' \
-                'dated {}'.format(attachment.raster, primary, mtime)
+        label = f'Attached Document {attachment.raster}, ' \
+                f'({primary}, Single Image), dated {mtime}'
         flowables.append(AttachedDoc(img, label))
 
     except Exception:
@@ -106,8 +106,7 @@ def build_audit_chrono(record, audit_ops):
                 {'name': 'Operation', 'width': 100, 'long': True,
                  'expandable': True}
             ])
-            flowables.append(AuditSection(
-                '{} {} {}'.format(rec.tdate, rec.ttime, rec.who)))
+            flowables.append(AuditSection(f'{rec.tdate} {rec.ttime} {rec.who}'))
             flowables.append(listing)
             flowables.append(Spacer(0, 10))
 
@@ -132,20 +131,18 @@ def build_audit_byfield(record, audit_ops, blinded):
     flowables = [Section('Audit by Field', record.keys_bookmark + 'FA')]
     for field in record.plate.user_fields:
 
-        entry_bookmark = record.keys_bookmark + '_{}AF'.format(field.number)
+        entry_bookmark = record.keys_bookmark + f'_{field.number}AF'
 
         # If this field blinded?
         if field.blinded and blinded == 'skip':
             continue
         if field.blinded and blinded == 'redact':
             flowables.append(AuditSection(
-                '{}. Internal Use Only Field'.format(field.number),
-                entry_bookmark))
+                f'{field.number}. Internal Use Only Field', entry_bookmark))
             flowables.append(Spacer(0, 10))
             continue
 
-        flowables.append(AuditSection('{}. {}'.format(field.number,
-                                                      field.description),
+        flowables.append(AuditSection(f'{field.number}. {field.description}',
                                       entry_bookmark))
 
         listing = Listing([
@@ -280,7 +277,7 @@ class CloseoutPDF:
         # Page Number
         label = ECRFLabel(Rect(inch, doc.pagesize[1]-60,
                                doc.pagesize[0]-inch, doc.pagesize[1]-48),
-                          'Page %d' % canv.getPageNumber(),
+                          f'Page {canv.getPageNumber()}',
                           {
                               'align': 'right',
                               'font_size': 10,
@@ -383,8 +380,7 @@ class CloseoutPDF:
                         record.field_missing_value_label(field.number) + ']'
                 else:
                     _, decoded = field.decode(value)
-                    if field.data_type == 'Check' or \
-                        field.data_type == 'Choice':
+                    if field.data_type in ('Check', 'Choice'):
                         value = value + ', ' + decoded
 
                     if not value:

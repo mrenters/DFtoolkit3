@@ -388,8 +388,7 @@ class Site:
 
     def __repr__(self):
         '''Printable version of the entry'''
-        return '{}: {}, patients: {}'.format(self._number, self.name,
-                                             str(self.patients))
+        return f'{self._number}: {self.name}, patients: {str(self.patients)}'
 
     @property
     def number(self):

@@ -94,11 +94,11 @@ class BeginPlate(Flowable):
 
     def draw(self):
         '''Tell the annotation object that we have started a new plate'''
-        bookmark = 'P{0}'.format(self.plate.number)
+        bookmark = f'P{self.plate.number}'
         self.canv.bookmarkPage(bookmark)
-        self.canv.addOutlineEntry('{0}: {1}'.format(self.plate.number,
-                                                    self.plate.description),
-                                  bookmark, 0)
+        self.canv.addOutlineEntry(
+                f'{self.plate.number}: {self.plate.description}',
+                bookmark, 0)
         self.canv.showOutline()
         self.annotate.set_plate(self.plate)
 
@@ -127,7 +127,7 @@ def make_field_entry(field, annotate):
         htmlify(field.expanded_alias, italic_font())
     name = Paragraph(lbl, default_style)
     ftype = \
-        Paragraph(htmlify(field.data_type + ' ({})'.format(field.store),
+        Paragraph(htmlify(field.data_type + f' ({field.store})',
                           regular_font()) + '<br/>' + \
                   htmlify(field.data_format or '', italic_font()),
                   default_style)
@@ -138,15 +138,15 @@ def make_field_entry(field, annotate):
         Paragraph(htmlify(field.expanded_legal_range, regular_font()),
                   default_style)
     codes = [Paragraph(
-        htmlify('{}\u2192'.format(box), bold_font()) + \
-        (htmlify('{}\u2192'.format(submission), bold_font()) \
+        htmlify(f'{box}\u2192', bold_font()) + \
+        (htmlify(f'{submission}\u2192', bold_font()) \
         if submission else '') + \
         htmlify(label, italic_font()), default_style) \
         for box, label, submission in field.codes]
     flowables = [num, name, ftype, desc, legal_vals, codes]
     list_entry = ListEntry(flowables)
     list_entry.set_callback(annotate.begin_field, field.number)
-    list_entry.bookmark_page = 'P{}F{}'.format(field.plate.number, field.number)
+    list_entry.bookmark_page = f'P{field.plate.number}F{field.number}'
     return list_entry
 
 class AnnotateCRF:
@@ -309,7 +309,7 @@ class AnnotateCRF:
                                   self.margins.bottom + 4,
                                   self.margins.right,
                                   self.margins.bottom + 14),
-                             'Page {}'.format(canvas.getPageNumber()),
+                             f'Page {canvas.getPageNumber()}',
                              properties_right)
         tl_label.draw(canvas, color=black)
         tr_label.draw(canvas, color=black)
@@ -328,20 +328,17 @@ class AnnotateCRF:
             canvas.setFillColor(priority_colors[i][0])
             canvas.rect(middle+(i-6)*10, -(bottom+17), 10, 10, fill=1)
             canvas.setFillColor(priority_colors[i][1])
-            canvas.drawCentredString(middle+(i-6)*10+5, -(bottom+15),
-                                     '{0}'.format(i))
+            canvas.drawCentredString(middle+(i-6)*10+5, -(bottom+15), f'{i}')
             canvas.setFillColor(priority_colors[i][2])
             canvas.rect(middle+(i-6)*10, -(bottom+27), 10, 10, fill=1)
             canvas.setFillColor(black)
-            canvas.drawCentredString(middle+(i-6)*10+5, -(bottom+25),
-                                     '{0}'.format(i))
+            canvas.drawCentredString(middle+(i-6)*10+5, -(bottom+25), f'{i}')
 
     def crf_page_header(self, canvas, doc):
         '''Draw the CRF pages with headers and the CRF image'''
         canvas.saveState()
         canvas.translate(0, doc.pagesize[1])
-        label = 'Plate {0}: {1}'.format(self.plate.number,
-                                        self.plate.description)
+        label = f'Plate {self.plate.number}: {self.plate.description}'
         self.draw_labels(canvas, label)
         self.draw_priority_labels(canvas)
 
@@ -398,7 +395,7 @@ class AnnotateCRF:
                 bounding_box = field.bounding_box.expand(2)
                 canvas.rect(bounding_box.left, -bounding_box.top,
                             bounding_box.width, -bounding_box.height)
-                bookmark = 'P{}F{}'.format(field.plate.number, field.number)
+                bookmark = f'P{field.plate.number}F{field.number}'
                 canvas.linkRect(bookmark, bookmark,
                                 (bounding_box.left, -bounding_box.top,
                                  bounding_box.right, -bounding_box.bottom),
@@ -482,8 +479,7 @@ class AnnotateCRF:
                 ]]
             for fieldref in sorted(xref[variable], key=lambda x: \
                                    (x.plate.number, x.number)):
-                bookmark = '#P{0}F{1}'.format(fieldref.plate.number,
-                                              fieldref.number)
+                bookmark = f'#P{fieldref.plate.number}F{fieldref.number}'
                 rows.append([
                     Paragraph('<a href="' + bookmark + '" color="blue">' + \
                               htmlify(fieldref.name, regular_font()) + \

@@ -62,7 +62,7 @@ def build_qc2excel(study, context):
             current_site_filter.from_string(str(site.number))
             context['sites'] = current_site_filter
 
-            name = 'Queries-{}.xlsx'.format(site.number)
+            name = f'Queries-{site.number}.xlsx'
             path = os.path.join(basepath, name)
             book = QC2ExcelWorkbook(path, context)
             nqueries = book.add_qc2excel('QCs', queries)
@@ -272,12 +272,12 @@ class QC2ExcelWorksheet(Worksheet):
         # Setup headers
         study_name = study.study_name
         self.merge_range(0, 0, 0, len(self.colnames)-1,
-                         'QC Report for {}'.format(study_name),
+                         f'QC Report for {study_name}',
                          self.fmt('title'))
         self.merge_range(1, 0, 1, len(self.colnames)-1,
                          date.today().isoformat(), self.fmt('header'))
         study_name = study_name.replace("&", "&&")
-        self.set_header('&LQC Report&C{0}&R&P of &N'.format(study_name))
+        self.set_header(f'&LQC Report&C{study_name}&R&P of &N')
 
         self.row = START_TABLE_ROW + 1
 
@@ -376,7 +376,7 @@ class QC2ExcelWorksheet(Worksheet):
                     lb_str = label
 
                 cell = xl_rowcol_to_cell(row, sitecol+1)
-                formula = '=IFERROR({0}/{1}, 0)'.format(cell, total_cell)
+                formula = f'=IFERROR({cell}/{total_cell}, 0)'
                 self.write_formula(row, sitecol, formula, self.fmt('percent'))
                 formula = '=SUMPRODUCT(SUBTOTAL(3,' \
                     'OFFSET({sht}_Details[{col}],' \
@@ -460,8 +460,7 @@ class QC2ExcelWorksheet(Worksheet):
             self.add_table(START_TABLE_ROW, 0,
                            self.row-1, len(self.colnames)-1, {
                                'autofilter': True, 'first_column': True,
-                               'name': '{sht}_Details'.format(
-                                   sht=self.get_name()),
+                               'name': f'{self.get_name()}_Details',
                                'columns': [{
                                    'header': colname,
                                    'header_format': self.fmt('header')

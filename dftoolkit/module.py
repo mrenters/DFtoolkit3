@@ -109,7 +109,7 @@ class Module:
         return changelist
 
     def __repr__(self):
-        return '<Module %d (%s)>' % (self.unique_id, self.name)
+        return f'<Module {self.unique_id} ({self.name})>'
 
 
 ##############################################################################
@@ -152,7 +152,7 @@ class ModuleRef:
     @property
     def identifier(self):
         '''Returns the module name and id as a MODULE[ID] string'''
-        return '{0} [{1}]'.format(self.name, self.instance)
+        return f'{self.name} [{self.instance}]'
 
     @property
     def unique_id(self):
@@ -198,4 +198,4 @@ class ModuleRef:
         return changelist
 
     def __repr__(self):
-        return '<ModuleRef %d (%s)>' % (self.unique_id, self.identifier)
+        return f'<ModuleRef {self.unique_id} ({self.identifier})>'

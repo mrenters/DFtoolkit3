@@ -421,7 +421,7 @@ class Style(FieldBase):
         study.add_style(self)
 
     def __repr__(self):
-        return '<Style %s>' % (self.style_name)
+        return f'<Style {self.style_name}>'
 
 ##############################################################################
 # Field Class
@@ -440,8 +440,7 @@ class Field(FieldBase):
         return self._module
 
     def __repr__(self):
-        return '<Field %d %s (%s)>' % (self.unique_id, self.name,
-                                       self.description)
+        return f'<Field {self.unique_id} {self.name} ({self.description})>'
 
 ##############################################################################
 # FieldRef Class - FieldRefs of a ModuleRef
@@ -492,7 +491,7 @@ class FieldRef(FieldBase):
     def expand_meta(self, text):
         '''Expands $(plate), $(rplate) and $(field) meta words'''
         plate_num = self._moduleref.plate.number
-        text = text.replace('$(plate)', '%03d' % (plate_num))
+        text = text.replace('$(plate)', f'{plate_num:03d}')
         text = text.replace('$(rplate)', str(plate_num))
         text = text.replace('$(field)', str(self.number))
         return text
@@ -550,7 +549,7 @@ class FieldRef(FieldBase):
         return sum(self.rects, self.rects[0]) if self.rects else None
 
     def __repr__(self):
-        return '<FieldRef %d (%s)>' % (self.number, self.description)
+        return f'<FieldRef {self.number} ({self.description})>'
 
     def layout_ecrf(self, width):
         '''Layout an ECRF question text on a page'''

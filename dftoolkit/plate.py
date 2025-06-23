@@ -118,10 +118,9 @@ class PlatePage:
 
     def add_title(self, page_rect):
         '''Add title header to the page'''
-        self.add_element(ECRFLabel(page_rect,
-                                   '{}: {}'.format(self.plate.number,
-                                                   self.plate.description),
-                                   attribs={'font_size':20, 'align':'center'}))
+        self.add_element(ECRFLabel(
+            page_rect, f'{self.plate.number}: {self.plate.description}',
+            attribs={'font_size':20, 'align':'center'}))
         return page_rect.top + 24
 
     def set_pagesize(self, pagesize):
@@ -255,7 +254,7 @@ class Plate:
         '''returns the field at position field_num (1-based)'''
         fields = self.fields
         if field_num < 1 or field_num > len(fields):
-            raise ValueError('field number {} out of range'.format(field_num))
+            raise ValueError(f'field number {field_num} out of range')
         return fields[field_num-1]
 
     @property
@@ -264,7 +263,7 @@ class Plate:
         return [field for field in self.fields if not field.is_system]
 
     def __repr__(self):
-        return '<Plate %d (%s)>' % (self._number, self.description)
+        return f'<Plate {self._number} ({self.description})>'
 
     def layout_pages(self, pagesize=letter, margin=0.5*inch):
         '''Lay out the CRF onto pages'''
@@ -299,8 +298,7 @@ class Plate:
         if len(self.pages) > 1:
             for number, page in enumerate(self.pages):
                 page.add_element(ECRFLabel(page_rect,
-                                           'Page {}/{}'.format(number+1,
-                                                               len(self.pages)),
+                                           f'Page {number+1}/{len(self.pages)}',
                                            attribs={'font_size': 10,
                                                     'align': 'right'}))
 

@@ -366,7 +366,7 @@ class DataQualityReport:
                             country_metrics[site.decoded_country], 'country')
             add_data_fields(data_fields, qc_types, site_metrics[site], 'site')
 
-            filename = 'dataquality-{}.pdf'.format(site.number)
+            filename = f'dataquality-{site.number}.pdf'
             reportcard = DataQualityReportCard(os.path.join(reportdir,
                                                             filename))
 

@@ -261,9 +261,8 @@ class TextSegment:
         pdf_canvas.drawText(textobject)
 
     def __repr__(self):
-        return 'TextSegment<width=%d, fontsize=%d, text=%s>' % (self.width,
-                                                                self.fontsize,
-                                                                self.fragments)
+        return f'TextSegment<width={self.width}, fontsize={self.fontsize}, ' \
+                f'text={self.fragments}>'
 
 if __name__ == '__main__':
     import doctest

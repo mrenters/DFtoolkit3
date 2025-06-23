@@ -110,9 +110,8 @@ class ScheduleEntry:
         return entry
 
     def __repr__(self):
-        return 'PID {} VISIT {}: {} {}'.format(self.pid, self.visit_number,
-                                               self.visit_status,
-                                               self.visit_date)
+        return f'PID {self.pid} VISIT {self.visit_number}: ' \
+                f'{self.visit_status} {self.visit_date}'
 
     @property
     def is_cycle(self):

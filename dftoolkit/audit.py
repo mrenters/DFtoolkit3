@@ -116,12 +116,11 @@ class AuditOps:
 
         if this_rec.op in ('N', 'C'):
             op_list.append(
-                ('q', htmlify('QC {0} ({1}): '.format(label, qctype),
-                              regular_font()) + \
+                ('q', htmlify(f'QC {label} ({qctype}): ', regular_font()) + \
                  htmlify(value, italic_font()))
             )
         elif this_rec.op == 'D':
-            op_list.append(('q', htmlify('QC Deleted (' + qctype + ')',
+            op_list.append(('q', htmlify(f'QC Deleted ({qctype})',
                                          regular_font())))
 
     def audit_ops_reason(self, this_rec, op_list):

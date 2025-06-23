@@ -124,18 +124,20 @@ class DatasetColumn:
             simple_format = re.sub('dd+', 'd', simple_format)
             simple_format = re.sub('mm+', 'm', simple_format)
             simple_format = re.sub('yy+', 'y', simple_format)
+            format_len = len(self.data_format)
             if simple_format == 'dmy':
-                informat = 'DDMMYY{}'.format(len(self.data_format))
+                informat = f'DDMMYY{format_len}'
             elif simple_format == 'mdy':
-                informat = 'MMDDYY{}'.format(len(self.data_format))
+                informat = f'MMDDYY{format_len}'
             elif simple_format == 'ymd':
-                informat = 'YYMMDD{}'.format(len(self.data_format))
+                informat = f'YYMMDD{format_len}'
             else:
                 print('unable to compute DATE informat for', self.data_format)
         elif self.data_type == 'Time':
-            informat = 'time{}'.format(len(self.data_format))
+            format_len = len(self.data_format)
+            informat = f'time{format_len}'
         elif self.data_type == 'String' and self.data_len:
-            informat = '$CHAR{}'.format(self.data_len)
+            informat = f'$CHAR{self.data_len}'
         elif self.data_type == 'ISO8601':
             informat = 'e8601dt19'
 
@@ -255,7 +257,7 @@ class PlateDataset(Dataset):
     @property
     def name(self):
         '''returns the name of the plate dataset'''
-        return 'PLATE{0:03d}'.format(self.plate.number)
+        return f'PLATE{self.plate.number:03d}'
 
     @property
     def dataset_type(self):

@@ -83,7 +83,7 @@ class VisitMapEntry:
         return self.display_order.position(plate)
 
     def __repr__(self):
-        return '<VisitMapEntry (%s)>' % (self.label)
+        return f'<VisitMapEntry ({self.label})>'
 
 #############################################################################
 # VisitMap - Visit Map class
@@ -102,7 +102,7 @@ class VisitMap:
         '''Find the label for the visit'''
         entry = self.visit(visit_number)
         return decode_pagemap_label(entry.label, visit_number, None) \
-            if entry is not None else "Visit {0}".format(visit_number)
+            if entry is not None else f'Visit {visit_number}'
 
     def visit_with_order(self, visit_number):
         '''Find the visit map entry for visit along with its position'''

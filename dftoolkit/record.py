@@ -93,7 +93,7 @@ class FieldValue:
         return submission or label
 
     def __repr__(self):
-        return '<FieldValue %s=%s>' % (self.field.name, self.value)
+        return f'<FieldValue {self.field.name}={self.value}>'
 
 
 class Record:
@@ -183,12 +183,12 @@ class Record:
     @property
     def keys(self):
         '''The record keys in display format'''
-        return '{}, {}, {}'.format(self.pid, self.visit_num, self.plate_num)
+        return f'{self.pid}, {self.visit_num}, {self.plate_num}'
 
     @property
     def keys_bookmark(self):
         '''The record keys in bookmark format'''
-        return '{}_{}_{}'.format(self.pid, self.visit_num, self.plate_num)
+        return f'{self.pid}_{self.visit_num}_{self.plate_num}'
 
     @property
     def plate_num(self):
@@ -255,5 +255,4 @@ class Record:
         return [FieldValue(field, self.field(fnum)) for field, fnum in fields]
 
     def __repr__(self):
-        return '<Record %d, %d, %d>' % (self.pid, self.visit_num,
-                                        self.plate_num)
+        return f'<Record {self.pid}, {self.visit_num}, {self.plate_num}>'

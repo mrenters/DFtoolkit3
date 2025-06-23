@@ -92,7 +92,7 @@ class Study:
         Style object.
         '''
         if style.style_name in self._styles:
-            raise ValueError('Style %s already exists' % (style.style_name))
+            raise ValueError(f'Style {style.style_name} already exists')
         self._styles[style.style_name] = style
 
     def style(self, name):
@@ -108,9 +108,9 @@ class Study:
         Module object.
         '''
         if module.name in self._modules:
-            raise ValueError('Module name %s already exists' % (module.name))
+            raise ValueError(f'Module name {module.name} already exists')
         if module.unique_id in self._module_ids:
-            raise ValueError('Module ID %d already exists' % (module.unique_id))
+            raise ValueError(f'Module ID {module.unique_id} already exists')
 
         self._modules[module.name] = module
         self._module_ids[module.unique_id] = module
@@ -126,14 +126,14 @@ class Study:
         '''Returns a reference to the module object with ID module_id'''
         module = self._module_ids.get(module_id)
         if not module:
-            raise ValueError('Module %d is not defined' % (module_id))
+            raise ValueError(f'Module {module_id} is not defined')
         return module
 
     def module_by_name(self, module_name):
         '''Returns a reference to the module object with name module_name'''
         module = self._modules.get(module_name)
         if not module:
-            raise ValueError('Module "%s" is not defined' % (module_name))
+            raise ValueError(f'Module "{module_name}" is not defined')
         return module
 
     def add_field(self, field):
@@ -144,7 +144,7 @@ class Study:
         '''get a field by ID'''
         field = self._field_ids.get(field_id)
         if not field:
-            raise ValueError('Field %d is not defined' % (field_id))
+            raise ValueError(f'Field {field_id} is not defined')
         return field
 
     ########################################################################
@@ -156,7 +156,7 @@ class Study:
         Plate object.
         '''
         if plate.number in self._plates:
-            raise ValueError('Plate number %d already exists' % (plate.number))
+            raise ValueError(f'Plate number {plate.number} already exists')
         self._plates[plate.number] = plate
 
     def plate(self, number):
@@ -276,7 +276,7 @@ class Study:
     def visit_label(self, visit):
         '''map a visit number to a label'''
         return self._visitmap.label(visit) if self._visitmap else \
-               'Visit {0}'.format(visit)
+               f'Visit {visit}'
 
     def visit(self, visit_num):
         '''returns a visit map entry for this visit'''
@@ -338,7 +338,7 @@ class Study:
         if not label:
             plate = self.plate(plate_num)
             label = plate.description if plate else \
-                    'Plate {0}'.format(plate_num)
+                    f'Plate {plate_num}'
         return label
 
     ########################################################################
@@ -394,7 +394,7 @@ class Study:
         return self._config.get('STUDY_NAME', self.setup_name)
 
     def __repr__(self):
-        return '<Study %d - %s>' % (self.number, self.study_name)
+        return f'<Study {self.number} - {self.study_name}>'
 
     ########################################################################
     # Load Study Setup information
@@ -471,10 +471,7 @@ class Study:
                 plate = self.plate(plate_num)
                 field = plate.field(field_num)
 
-                if priority < 1:
-                    priority = 1
-                if priority > 5:
-                    priority = 5
+                priority = min(max(priority, 1), 5)
                 field.priority = priority
             except ValueError:
                 pass

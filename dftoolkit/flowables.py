@@ -277,7 +277,7 @@ class CRF(Flowable):
                       fill=1)
         if not self.record.missing and not self.record.deleted \
             and not self.exclude_datalisting:
-            linkname = self.record.keys_bookmark + '_{}'.format(field.number)
+            linkname = self.record.keys_bookmark + f'_{field.number}'
             bbox = field.bounding_box
             canv.linkRect(linkname, linkname,
                           (bbox.left, -bbox.top, bbox.right, -bbox.bottom),
@@ -936,7 +936,7 @@ class RankingChart(Flowable):
         canvas.drawCentredString(
             60, 5, 'B: 95 \u2264 97; C: 90 \u2264 95; D: \u2264 90')
         canvas.setFont('Helvetica-Bold', 10)
-        canvas.drawCentredString(60, 25, '{0:6.2f}%'.format(completeness))
+        canvas.drawCentredString(60, 25, f'{completeness:6.2f}%')
 
     def draw(self):
         '''draws the QCChart'''

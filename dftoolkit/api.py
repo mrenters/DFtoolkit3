@@ -270,15 +270,13 @@ class APIFiles(APIBase):
         args.append(str(self.studynum))
         args.append(str(plate.number))
         args.append('-')
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        for data in proc.stdout:
-            try:
-                record = data.decode('utf-8')
-            except UnicodeDecodeError:
-                record = data.decode('latin-1')
-            yield record.rstrip('\n')
-
-        proc.wait()
+        with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
+            for data in proc.stdout:
+                try:
+                    record = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    record = data.decode('latin-1')
+                yield record.rstrip('\n')
 
     def queries(self, subjects=SubjectList(default_all=True)):
         '''Returns query records'''
@@ -293,15 +291,13 @@ class APIFiles(APIBase):
         args.append(str(self.studynum))
         args.append('511')
         args.append('-')
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        for data in proc.stdout:
-            try:
-                record = data.decode('utf-8')
-            except UnicodeDecodeError:
-                record = data.decode('latin-1')
-            yield record.rstrip('\n')
-
-        proc.wait()
+        with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
+            for data in proc.stdout:
+                try:
+                    record = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    record = data.decode('latin-1')
+                yield record.rstrip('\n')
 
     def reasons(self, subjects=SubjectList(default_all=True)):
         '''Returns reason records'''
@@ -316,15 +312,13 @@ class APIFiles(APIBase):
         args.append(str(self.studynum))
         args.append('510')
         args.append('-')
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        for data in proc.stdout:
-            try:
-                record = data.decode('utf-8')
-            except UnicodeDecodeError:
-                record = data.decode('latin-1')
-            yield record.rstrip('\n')
-
-        proc.wait()
+        with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
+            for data in proc.stdout:
+                try:
+                    record = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    record = data.decode('latin-1')
+                yield record.rstrip('\n')
 
     def schedules(self, subjects=SubjectList(default_all=True)):
         '''Returns schedule records'''
@@ -361,12 +355,10 @@ class APIFiles(APIBase):
             args.append('-I')
             args.append(str(subjects))
 
-        proc = subprocess.Popen(args, stdout=subprocess.PIPE)
-        for data in proc.stdout:
-            try:
-                record = data.decode('utf-8')
-            except UnicodeDecodeError:
-                record = data.decode('latin-1')
-            yield record.rstrip('\n')
-
-        proc.wait()
+        with subprocess.Popen(args, stdout=subprocess.PIPE) as proc:
+            for data in proc.stdout:
+                try:
+                    record = data.decode('utf-8')
+                except UnicodeDecodeError:
+                    record = data.decode('latin-1')
+                yield record.rstrip('\n')

@@ -103,8 +103,8 @@ class RangeList:
     def to_string(self):
         '''Returns a string representation of a RangeList'''
         return ','.join(
-            ['{0}'.format(r[0]) if r[0] == r[1] else \
-             '{0}-{1}'.format(r[0], r[1]) for r in self.values])
+            [f'{r[0]}' if r[0] == r[1] else \
+             f'{r[0]}-{r[1]}' for r in self.values])
 
     def __repr__(self):
         return self.to_string()
@@ -131,27 +131,27 @@ class RangeList:
 class SiteList(RangeList):
     '''A representation of a list of sites'''
     def __init__(self, **kwargs):
-        super(SiteList, self).__init__(0, 21460, **kwargs)
+        super().__init__(0, 21460, **kwargs)
 
 class SubjectList(RangeList):
     '''A representation of a list of patients'''
     def __init__(self, **kwargs):
-        super(SubjectList, self).__init__(1, 281474976710656, **kwargs)
+        super().__init__(1, 281474976710656, **kwargs)
 
 class PlateList(RangeList):
     '''A representation of a list of plates'''
     def __init__(self, **kwargs):
-        super(PlateList, self).__init__(1, 500, **kwargs)
+        super().__init__(1, 500, **kwargs)
 
 class VisitList(RangeList):
     '''A representation of a list of visits'''
     def __init__(self, **kwargs):
-        super(VisitList, self).__init__(0, 65535, **kwargs)
+        super().__init__(0, 65535, **kwargs)
 
 class LevelList(RangeList):
     '''A representation of a list of levels'''
     def __init__(self, **kwargs):
-        super(LevelList, self).__init__(0, 7, **kwargs)
+        super().__init__(0, 7, **kwargs)
 
 class RangeListAction(argparse.Action):
     '''
@@ -160,7 +160,7 @@ class RangeListAction(argparse.Action):
                         action=RangeListAction)
     '''
     def __init__(self, option_strings, dest, nargs=None, **kwargs):
-        super(RangeListAction, self).__init__(option_strings, dest, **kwargs)
+        super().__init__(option_strings, dest, **kwargs)
         if not isinstance(self.default, RangeList):
             raise ValueError('No default rangelist specified')
 
