@@ -46,8 +46,12 @@ def add_data_fields(data_fields, qc_types, metrics, level):
     data_fields[level + 'PercentComplete'] = metrics.percent_complete
     data_fields[level + 'PercentFinal'] = metrics.percent_final
     data_fields[level + 'OutstandingQueryCount'] = metrics.total_qcs
+    data_fields[level + 'QueryOutstandingGt30daysCount'] = \
+        metrics.qc_gt30days
     data_fields[level + 'QueryOutstandingGt60daysCount'] = \
         metrics.qc_gt60days
+    data_fields[level + 'QueryOutstandingGt90daysCount'] = \
+        metrics.qc_gt90days
     data_fields[level + 'RecordWithQueryCount'] = metrics.qc_nrecs
     data_fields[level + 'QueriesPerSubject'] = metrics.qcs_per_patient
     for qc_type, qc_name in qc_types:
@@ -74,7 +78,9 @@ class QualityStats:
         self.nreportslost = 0
         self.nconsecoverdue = 0
         self.qc_nrecs = 0
+        self.qc_gt30days = 0
         self.qc_gt60days = 0
+        self.qc_gt90days = 0
         self.qc_types = Counter()
         self.qc_reckeys = {}
 
@@ -85,8 +91,12 @@ class QualityStats:
         self.qc_reckeys[(query.visit_num, query.plate_num)] = 1
         self.qc_nrecs = len(self.qc_reckeys)
         self.qc_types[query.qctype] += 1
+        if query.age > 30:
+            self.qc_gt30days += 1
         if query.age > 60:
             self.qc_gt60days += 1
+        if query.age > 90:
+            self.qc_gt90days += 1
 
     def handle_data(self, record):
         '''handle a data record'''
@@ -144,7 +154,9 @@ class QualityStats:
         res.nreportslost = self.nreportslost + other.nreportslost
         res.nconsecoverdue = self.nconsecoverdue + other.nconsecoverdue
         res.qc_nrecs = self.qc_nrecs + other.qc_nrecs
+        res.qc_gt30days = self.qc_gt30days + other.qc_gt30days
         res.qc_gt60days = self.qc_gt60days + other.qc_gt60days
+        res.qc_gt90days = self.qc_gt90days + other.qc_gt90days
         res.qc_types = self.qc_types + other.qc_types
         return res
 
@@ -574,7 +586,9 @@ class DataQualityXLSX:
             ('Outstanding Queries', 10, 'sum'),
             ('Records affected by Queries', 10, 'sum'),
             ('Outstanding Queries / Subject', 10, 'qcs_subject,float,max_bad'),
-            ('Outstanding Queries >60days', 10, 'sum,max_bad')
+            ('Outstanding Queries >30days', 10, 'sum,max_bad'),
+            ('Outstanding Queries >60days', 10, 'sum,max_bad'),
+            ('Outstanding Queries >90days', 10, 'sum,max_bad')
         ]
 
         # Build the table headers
@@ -702,9 +716,11 @@ class DataQualityXLSX:
         sheet.write(row, col+10, metrics.total_qcs, number_format)
         sheet.write(row, col+11, metrics.qc_nrecs, number_format)
         sheet.write(row, col+12, metrics.qcs_per_patient, float_format)
-        sheet.write(row, col+13, metrics.qc_gt60days, number_format)
+        sheet.write(row, col+13, metrics.qc_gt30days, number_format)
+        sheet.write(row, col+14, metrics.qc_gt60days, number_format)
+        sheet.write(row, col+15, metrics.qc_gt90days, number_format)
         for qc_col, (qc_type, _) in enumerate(self.qc_types):
-            sheet.write(row, col+qc_col+14, metrics.qc_types[qc_type],
+            sheet.write(row, col+qc_col+16, metrics.qc_types[qc_type],
                         number_format)
         return col
 
