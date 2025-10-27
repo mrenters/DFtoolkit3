@@ -183,7 +183,7 @@ class DataQualityReport:
     #################################################################
     def load_enrolled_patients(self, path):
         '''load list of patients of interest'''
-        with open(path, 'r') as idlist:
+        with open(path, 'r', encoding='utf8') as idlist:
             for rec in idlist:
                 try:
                     pid = int(rec)
@@ -229,11 +229,14 @@ class DataQualityReport:
         '''Load query information into report'''
         plate_filter = self.config['plates']
         visit_filter = self.config['visits']
+        external_only = self.config.get('external_only', False)
 
         for query in self.study.queries():
             if query.plate_num not in plate_filter:
                 continue
             if query.visit_num not in visit_filter:
+                continue
+            if query.is_internal and external_only:
                 continue
 
             patient = self.patients.get(query.pid)

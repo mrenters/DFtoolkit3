@@ -43,6 +43,8 @@ def main():
                         help='file containing subjects to include')
     parser.add_argument('--merge-mpqc', action='store_true',
                         help='merge Missing Pages and EC Missing Page counts')
+    parser.add_argument('--external-only', action='store_true',
+                        help='only include external queries when reporting')
     parser.add_argument('--sites', default=SiteList(default_all=True),
                         action=RangeListAction,
                         help='include only listed sites')
@@ -67,7 +69,7 @@ def main():
     parser.add_argument('--verbose', action='count', default=0,
                         help='enable additional debugging information')
     parser.add_argument('--version', action='version',
-                        version='%(prog)s {vers}'.format(vers=__version__))
+                        version=f'%(prog)s {__version__}')
 
     args = parser.parse_args()
     setup_logging(args.verbose)
@@ -76,6 +78,7 @@ def main():
 
     dataq = DataQualityReport(study, {
         'sites': args.sites,
+        'external_only': args.external_only,
         'ids': args.ids,
         'visits': args.visits,
         'plates': args.plates,
