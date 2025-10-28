@@ -49,7 +49,7 @@ def main():
     parser.add_argument('--verbose', action='count', default=0,
                         help='enable additional debugging information')
     parser.add_argument('--version', action='version',
-                        version='%(prog)s {vers}'.format(vers=__version__))
+                        version=f'%(prog)s {__version__}')
     args = parser.parse_args()
 
     setup_logging(args.verbose)
